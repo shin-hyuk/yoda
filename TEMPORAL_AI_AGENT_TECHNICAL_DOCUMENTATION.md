@@ -58,23 +58,104 @@ graph TB
     User[User Input] --> API[FastAPI MCP Server]
     API --> Temporal[Temporal Workflow Engine]
     Temporal --> Worker[Temporal Worker]
-    Worker --> LLM[LLM Activities]
-    Worker --> NativeTools[Native Tools]
-    Worker --> MCPTools[MCP Tools]
-    MCPTools --> External[External MCP Servers]
     
-    subgraph "Data Layer"
-        Postgres[(PostgreSQL)]
-        Temporal --> Postgres
+    subgraph ServerSide ["🔧 SERVER SIDE - Temporal Orchestration"]
+        direction TB
+        Worker --> Orchestrator[Workflow Orchestrator]
+        Orchestrator --> LLM[LLM Activities]
+        Orchestrator --> ToolRouter[Tool Router]
+        
+        subgraph DataLayer ["📊 Data Layer"]
+            Postgres[(PostgreSQL<br/>- Workflow Events<br/>- Conversation History<br/>- Tool Execution Results<br/>- Agent State)]
+            Temporal --> Postgres
+            LocalStorage[Browser LocalStorage<br/>- UI State<br/>- Chat History Cache]
+        end
+        
+        subgraph Infrastructure ["🏗️ Infrastructure"]
+            Docker[Docker Compose<br/>- Temporal Server<br/>- PostgreSQL<br/>- API Server<br/>- Worker<br/>- UI]
+            TemporalUI[Temporal UI<br/>- Workflow Monitoring<br/>- Execution History]
+        end
     end
     
-    subgraph "Infrastructure"
-        Docker[Docker Compose]
-        Docker --> API
-        Docker --> Worker
-        Docker --> Temporal
+    subgraph ToolDev ["🛠️ TOOL DEVELOPMENT SIDE - Abstracted Interface"]
+        direction TB
+        ToolRouter --> NativeTools[Native Tools<br/>- Python Functions<br/>- Domain-specific Logic]
+        ToolRouter --> MCPAdapter[MCP Adapter]
+        MCPAdapter --> MCPTools[MCP Tools]
+        MCPTools --> External[External MCP Servers<br/>- Stripe API<br/>- Database Connectors<br/>- Third-party Services]
+        
+        subgraph ToolRegistry ["📋 Tool Registry"]
+            StaticTools[Static Tool Definitions<br/>tools/tool_registry.py]
+            DynamicTools[Dynamic MCP Discovery<br/>Runtime Tool Loading]
+            GoalMapping[Goal-Tool Mapping<br/>goals/ directory]
+        end
     end
+    
+    classDef serverBox fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
+    classDef toolBox fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    classDef dataBox fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef infraBox fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    
+    class ServerSide serverBox
+    class ToolDev toolBox
+    class DataLayer dataBox
+    class Infrastructure infraBox
 ```
+
+### PostgreSQL Data Storage Analysis
+
+**What's Stored in PostgreSQL**:
+
+The PostgreSQL database is **exclusively used by Temporal Server** for workflow orchestration persistence. The application does **not directly access PostgreSQL** - all data flows through Temporal's event sourcing mechanism.
+
+**Temporal-Managed Data in PostgreSQL**:
+- **Workflow Events**: Complete audit trail of workflow execution steps
+- **Conversation History**: Persisted as workflow state (`self.conversation_history`)
+- **Tool Execution Results**: Activity outputs and error states (`self.tool_results`)
+- **Agent State**: Goal configurations, confirmation states, prompt queues
+- **MCP Tools Metadata**: Dynamically discovered tool definitions
+- **Signal History**: User prompts, confirmations, and end-chat events
+- **Activity Retry Information**: Failed attempts and retry scheduling
+- **Workflow Metadata**: Execution times, worker assignments, task queue states
+
+**Client-Side Data Storage**:
+- **Browser LocalStorage**: UI state cache and conversation history for offline viewing
+- **No Direct Database Access**: Application code never connects to PostgreSQL directly
+
+**Data Flow Pattern**:
+```
+User Input → API → Temporal Workflow → PostgreSQL (via Temporal)
+                ↓
+Tool Execution → Activity Results → Workflow State → PostgreSQL (via Temporal)
+```
+
+### Clear Architectural Separation
+
+**🔧 SERVER SIDE** - Temporal Orchestration Layer:
+- **Concerns**: Workflow management, state persistence, retry policies, observability
+- **Responsibilities**: LLM coordination, tool routing, conversation flow, error handling
+- **Knowledge Required**: Temporal concepts, workflow patterns, activity design
+- **Files**: `workflows/`, `activities/`, `api/main.py`, `shared/config.py`
+
+**🛠️ TOOL DEVELOPMENT SIDE** - Abstracted Interface:
+- **Concerns**: Business logic implementation, input validation, external API integration
+- **Responsibilities**: Tool functionality, parameter handling, response formatting
+- **Knowledge Required**: Domain expertise, API contracts, data transformation
+- **Files**: `tools/`, `goals/`, individual tool implementations
+
+**🚧 Abstraction Boundary**:
+Tool developers **never need to know**:
+- How Temporal workflows manage state
+- Database schema or persistence mechanics
+- Retry policies or error handling strategies
+- Workflow signal/query patterns
+- Activity scheduling or task queues
+
+Tool developers **only need to know**:
+- Input parameter contracts (`ToolArgument` structure)
+- Expected response format (`Dict[str, Any]` with success/error patterns)
+- Goal association patterns (`goals/` directory structure)
+- MCP server configuration (if using external tools)
 
 ### Complete Execution Flow
 
@@ -300,35 +381,97 @@ class ToolDefinition:
 
 ### Design Guidelines for Tool Developers
 
+**🎯 Tool Developer Focus**: Build business logic without Temporal knowledge
+
 **Naming Conventions**:
 - PascalCase for tool names (e.g., `SearchFlights`, `CheckAccountBalance`)
 - Descriptive parameter names with clear types
 - Consistent description format across domains
 
-**Interface Requirements**:
+**Tool Development Pattern** - 3-Step Process:
+
+1. **Define Tool Metadata** (`tools/tool_registry.py`):
 ```python
-# Example native tool structure
-@activity.defn
+search_flights_tool = ToolDefinition(
+    name="SearchFlights",
+    description="Search for return flights from origin to destination within date range",
+    arguments=[
+        ToolArgument(name="origin", type="string", description="Airport or city code"),
+        ToolArgument(name="destination", type="string", description="Airport or city code"),
+        ToolArgument(name="dateDepart", type="ISO8601", description="Departure date"),
+        ToolArgument(name="dateReturn", type="ISO8601", description="Return date"),
+    ],
+)
+```
+
+2. **Implement Tool Logic** (`tools/search_flights.py`):
+```python
+# Tool developers only need this simple interface
 async def search_flights(args: Dict[str, Any]) -> Dict[str, Any]:
-    # Input validation
+    # 🔹 Input validation (your domain logic)
     origin = args.get("origin")
     destination = args.get("destination")
     
-    # Business logic
-    result = perform_search(origin, destination)
+    # 🔹 Business logic (your expertise area)
+    result = perform_flight_search(origin, destination)
     
-    # Structured response
+    # 🔹 Standard response format (required contract)
     return {
         "tool": "SearchFlights",
         "success": True,
-        "content": result
+        "content": result,  # Your business data
     }
 ```
 
+3. **Associate with Goals** (`goals/travel.py`):
+```python
+goal_travel_booking = AgentGoal(
+    id="goal_travel_booking",
+    tools=[search_flights_tool],  # Link your tool
+    description="Help users find and book flights",
+)
+```
+
+**🚧 Temporal Abstraction Layer**:
+
+What **Tool Developers DON'T Handle**:
+- ❌ Workflow state management
+- ❌ Database persistence 
+- ❌ Retry policies
+- ❌ Error recovery strategies
+- ❌ LLM integration
+- ❌ User confirmation flows
+
+What **Temporal Server Handles Automatically**:
+- ✅ Activity execution and retries
+- ✅ State persistence and recovery
+- ✅ Tool routing and dispatch
+- ✅ User interaction management
+- ✅ Error handling and logging
+- ✅ Workflow orchestration
+
+**MCP Tool Integration** (External Services):
+```python
+# For external MCP tools, developers only need:
+mcp_server_def = MCPServerDefinition(
+    name="stripe-mcp",
+    command="npx",
+    args=["-y", "@stripe/mcp", "--api-key=KEY"],
+    included_tools=["create_payment", "list_customers"]
+)
+
+# Temporal automatically handles:
+# - MCP client connection pooling
+# - Tool discovery and registration  
+# - Parameter conversion and validation
+# - Response normalization
+```
+
 **Scope Definition**:
-- Single responsibility per tool
-- Clear input/output contracts
-- Domain-specific organization (`finance/`, `hr/`, `ecommerce/`)
+- **Single Responsibility**: One tool = One business function
+- **Clear Contracts**: Defined input/output with typed parameters  
+- **Domain Organization**: Tools grouped by business domain (`finance/`, `hr/`, `ecommerce/`)
+- **Stateless Design**: Tools don't maintain state between calls
 
 ## 2. Security and Scope Enforcement via JWT
 
