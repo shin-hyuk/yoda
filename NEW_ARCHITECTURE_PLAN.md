@@ -136,11 +136,18 @@ Tool developers work with **simple decorator-based interface**:
        # Just business logic - everything else automated
    ```
 
-2. **Reference in goal** (`goals/finance.py` - simple auto-discovery reference)
+2. **Reference in goal** (`goals/finance.py` - **FULLY AUTOMATED**)
    ```python
-   goal_finance = AgentGoal(
-       tools=auto_discover_tools(["CheckAccountValid", "GetTransactions"])
-   )
+   # BEFORE: Manual imports and manual tool references (3+ lines per tool)
+   import tools.tool_registry as tool_registry
+   tools=[
+       tool_registry.financial_check_account_is_valid,
+       tool_registry.financial_get_account_balances,
+       tool_registry.financial_move_money,
+   ]
+   
+   # AFTER: Auto-discovery by name (1 line)
+   tools=auto_discover_tools(["FinCheckAccountIsValid", "FinGetAccountBalances", "FinMoveMoney"])
    ```
 
 **New Benefits:**
@@ -340,6 +347,45 @@ def convert_type(value: Any, expected_type: str, arg_name: str) -> Any:
         return value
 ```
 
+#### **6. `tools/auto_discovery.py` (NEW FILE) - Goal File Automation**
+```python
+from typing import List, Dict, Any
+from models.tool_definitions import ToolDefinition
+from tools.decorators import TOOL_REGISTRY, TOOL_DEFINITIONS
+
+def auto_discover_tools(tool_names: List[str]) -> List[ToolDefinition]:
+    """
+    Auto-discover tools by name for goal files
+    Eliminates manual tool_registry imports and references
+    
+    Usage in goals/finance.py:
+    tools = auto_discover_tools(["FinCheckAccountIsValid", "FinGetAccountBalances"])
+    """
+    discovered_tools = []
+    for tool_name in tool_names:
+        if tool_name in TOOL_DEFINITIONS:
+            discovered_tools.append(TOOL_DEFINITIONS[tool_name])
+        else:
+            available_tools = list(TOOL_DEFINITIONS.keys())
+            raise ValueError(
+                f"Tool '{tool_name}' not found in auto-registry. "
+                f"Available tools: {available_tools}"
+            )
+    return discovered_tools
+
+def get_tools_by_category(category: str) -> List[ToolDefinition]:
+    """Get all tools for a specific category (finance, travel, etc.)"""
+    category_tools = []
+    for tool_name, func in TOOL_REGISTRY.items():
+        if hasattr(func, '_tool_category') and func._tool_category == category:
+            category_tools.append(TOOL_DEFINITIONS[tool_name])
+    return category_tools
+
+def get_all_available_tools() -> Dict[str, ToolDefinition]:
+    """Get all registered tools - useful for debugging"""
+    return TOOL_DEFINITIONS.copy()
+```
+
 ### **🔄 FILES to be ENHANCED with @tool Decorator**
 
 #### **All Tool Implementation Files (20+ files)**
@@ -424,19 +470,43 @@ async def dynamic_tool_activity(args: Sequence[RawValue]) -> dict:
     return result
 ```
 
-#### **7. Goal Files (Simplified References)**
+#### **7. Goal Files - ALL 7 files (Fully Automated Tool References)**
 ```python
-# BEFORE: Manual tool registry imports
+# BEFORE: Manual tool registry imports and references (goals/finance.py)
 import tools.tool_registry as tool_registry
-tools=[
-    tool_registry.financial_check_account_is_valid,
-    tool_registry.financial_get_account_balances,
-]
+from models.tool_definitions import AgentGoal
 
-# AFTER: Reference by name (auto-resolved)
-from tools.registry import get_tools_by_category
-tools = get_tools_by_category("finance", ["FinCheckAccountIsValid", "FinCheckAccountBalance"])
+goal_fin_check_account_balances = AgentGoal(
+    tools=[
+        tool_registry.financial_check_account_is_valid,  # Manual reference
+        tool_registry.financial_get_account_balances,    # Manual reference  
+        tool_registry.financial_move_money,              # Manual reference
+    ],
+)
+
+# AFTER: Auto-discovery by name (no imports needed)
+from tools.auto_discovery import auto_discover_tools
+from models.tool_definitions import AgentGoal
+
+goal_fin_check_account_balances = AgentGoal(
+    tools=auto_discover_tools([
+        "FinCheckAccountIsValid", 
+        "FinGetAccountBalances", 
+        "FinMoveMoney"
+    ]),
+)
 ```
+
+**Files to be Updated:**
+- ✅ `goals/finance.py` - 3 goals with finance tools
+- ✅ `goals/travel.py` - 2 goals with travel tools  
+- ✅ `goals/hr.py` - 2 goals with HR tools
+- ✅ `goals/ecommerce.py` - 2 goals with ecommerce tools
+- ✅ `goals/food.py` - 1 goal with food tools
+- ✅ `goals/agent_selection.py` - 1 goal with agent tools
+- ✅ `goals/stripe_mcp.py` - 1 goal with MCP tools
+
+**Result**: No more manual `tool_registry` imports - everything auto-discovered!
 
 ---
 
