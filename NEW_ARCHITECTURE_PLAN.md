@@ -91,16 +91,16 @@ graph TB
         AgentWorkflow --> ToolExecution[Tool Execution<br/>workflows/workflow_helpers.py]
         
         ToolExecution --> AutoHandler[Auto get_handler Function<br/>tools/__init__.py]
-        AutoHandler --> DecoratedTools[Auto-Registered Tool Functions<br/>tools/*/ with @tool decorator]
+        AutoHandler --> DecoratedTools["Auto-Registered Tool Functions<br/>tools/*/ with tool decorator"]
         
         ToolExecution --> MCPClient[MCP Client Manager<br/>shared/mcp_client_manager.py]
         MCPClient --> ExternalMCP[External MCP Servers<br/>Stripe, etc.]
         
         subgraph AutoDiscovery ["✅ Auto-Discovery Tool System"]
-            AutoRegistry[tools/decorators.py<br/>@tool Decorator Auto-Registration]
-            AutoValidation[tools/validation.py<br/>Auto Parameter Validation]
-            AutoDefinitions[Auto-Generated ToolDefinitions<br/>Runtime Discovery]
-            AutoStaticList[Auto-Generated static_tool_names<br/>Dynamic Loading]
+            AutoRegistry["tools/decorators.py<br/>Tool Decorator Auto-Registration"]
+            AutoValidation["tools/validation.py<br/>Auto Parameter Validation"]
+            AutoDefinitions["Auto-Generated ToolDefinitions<br/>Runtime Discovery"]
+            AutoStaticList["Auto-Generated static_tool_names<br/>Dynamic Loading"]
         end
         
         subgraph DataLayer ["📊 Data Layer"]
