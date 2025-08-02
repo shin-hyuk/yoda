@@ -51,56 +51,72 @@ retry_policy=RetryPolicy(
 
 ## 2. Full Execution Flow
 
-### System Architecture
+### Current System Architecture
 
 ```mermaid
 graph TB
-    User[User Input] --> API[FastAPI MCP Server]
-    API --> Temporal[Temporal Workflow Engine]
+    User[User Input] --> Frontend[React Frontend<br/>localhost:5173]
+    Frontend --> API[FastAPI Server<br/>localhost:8000]
+    API --> Temporal[Temporal Server<br/>localhost:7233]
     Temporal --> Worker[Temporal Worker]
     
-    subgraph ServerSide ["🔧 SERVER SIDE - Temporal Orchestration"]
+    subgraph MonolithicSystem ["🏗️ Single Monolithic Codebase - temporal-ai-agent"]
         direction TB
-        Worker --> Orchestrator[Workflow Orchestrator]
-        Orchestrator --> LLM[LLM Activities]
-        Orchestrator --> ToolRouter[Tool Router]
+        Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
+        AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
+        AgentWorkflow --> ToolExecution[Tool Execution<br/>workflows/workflow_helpers.py]
+        
+        ToolExecution --> GetHandler[get_handler Function<br/>tools/__init__.py]
+        GetHandler --> NativeTools[Native Tool Functions<br/>tools/*/]
+        
+        ToolExecution --> MCPClient[MCP Client Manager<br/>shared/mcp_client_manager.py]
+        MCPClient --> ExternalMCP[External MCP Servers<br/>Stripe, etc.]
+        
+        subgraph ManualRegistration ["⚠️ Manual Tool Registration Process"]
+            ToolRegistry[tools/tool_registry.py<br/>Manual ToolDefinitions]
+            HandlerMapping[tools/__init__.py<br/>Manual if/else chain]
+            StaticList[workflows/workflow_helpers.py<br/>Manual static_tool_names]
+            GoalFiles[goals/*.py<br/>Manual tool references]
+        end
         
         subgraph DataLayer ["📊 Data Layer"]
-            Postgres[(PostgreSQL<br/>- Workflow Events<br/>- Conversation History<br/>- Tool Execution Results<br/>- Agent State)]
+            Postgres[(PostgreSQL<br/>- Temporal Event History<br/>- Workflow State<br/>- Conversation Data)]
             Temporal --> Postgres
-            LocalStorage[Browser LocalStorage<br/>- UI State<br/>- Chat History Cache]
+            LocalStorage[Browser LocalStorage<br/>- Chat History Cache]
         end
         
         subgraph Infrastructure ["🏗️ Infrastructure"]
-            Docker[Docker Compose<br/>- Temporal Server<br/>- PostgreSQL<br/>- API Server<br/>- Worker<br/>- UI]
-            TemporalUI[Temporal UI<br/>- Workflow Monitoring<br/>- Execution History]
+            Docker[Docker Compose<br/>7 Containers:<br/>- temporal<br/>- postgresql<br/>- api<br/>- worker<br/>- train-api<br/>- frontend<br/>- temporal-ui]
         end
     end
     
-    subgraph ToolDev ["🛠️ TOOL DEVELOPMENT SIDE - Abstracted Interface"]
-        direction TB
-        ToolRouter --> NativeTools[Native Tools<br/>- Python Functions<br/>- Domain-specific Logic]
-        ToolRouter --> MCPAdapter[MCP Adapter]
-        MCPAdapter --> MCPTools[MCP Tools]
-        MCPTools --> External[External MCP Servers<br/>- Stripe API<br/>- Database Connectors<br/>- Third-party Services]
-        
-        subgraph ToolRegistry ["📋 Tool Registry"]
-            StaticTools[Static Tool Definitions<br/>tools/tool_registry.py]
-            DynamicTools[Dynamic MCP Discovery<br/>Runtime Tool Loading]
-            GoalMapping[Goal-Tool Mapping<br/>goals/ directory]
-        end
-    end
-    
-    classDef serverBox fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
-    classDef toolBox fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    classDef monolith fill:#fff9c4,stroke:#f57f17,stroke-width:3px
+    classDef manual fill:#ffebee,stroke:#c62828,stroke-width:2px
     classDef dataBox fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef infraBox fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     
-    class ServerSide serverBox
-    class ToolDev toolBox
+    class MonolithicSystem monolith
+    class ManualRegistration manual
     class DataLayer dataBox
     class Infrastructure infraBox
 ```
+
+### Current Tool Development Reality
+
+**❌ No Abstraction Layer Exists** - Tool developers work directly in the monolithic codebase and must:
+
+1. **Create tool function** (`tools/fin/check_account_valid.py`)
+2. **Add manual definition** (`tools/tool_registry.py` - 20+ lines of ToolDefinition)
+3. **Add manual handler** (`tools/__init__.py` - if/else statement in get_handler())
+4. **Add to static list** (`workflows/workflow_helpers.py` - manual static_tool_names maintenance)
+5. **Reference in goal** (`goals/finance.py` - import and reference tool_registry)
+
+**Current Pain Points:**
+- ❌ **Manual registration** across 4-5 files per tool
+- ❌ **Human error prone** - easy to forget steps or make mistakes
+- ❌ **Temporal knowledge required** - must understand workflow internals
+- ❌ **No validation automation** - manual parameter checking everywhere
+- ❌ **High maintenance overhead** - 50+ manual if/else statements in get_handler()
 
 ### PostgreSQL Data Storage Analysis
 
@@ -129,33 +145,38 @@ User Input → API → Temporal Workflow → PostgreSQL (via Temporal)
 Tool Execution → Activity Results → Workflow State → PostgreSQL (via Temporal)
 ```
 
-### Clear Architectural Separation
+### Current Architecture Reality: No Clear Separation
 
-**🔧 SERVER SIDE** - Temporal Orchestration Layer:
-- **Concerns**: Workflow management, state persistence, retry policies, observability
-- **Responsibilities**: LLM coordination, tool routing, conversation flow, error handling
-- **Knowledge Required**: Temporal concepts, workflow patterns, activity design
-- **Files**: `workflows/`, `activities/`, `api/main.py`, `shared/config.py`
+**❌ CURRENT STATE** - Monolithic Single Codebase:
 
-**🛠️ TOOL DEVELOPMENT SIDE** - Abstracted Interface:
-- **Concerns**: Business logic implementation, input validation, external API integration
-- **Responsibilities**: Tool functionality, parameter handling, response formatting
-- **Knowledge Required**: Domain expertise, API contracts, data transformation
-- **Files**: `tools/`, `goals/`, individual tool implementations
+**All developers (tool and workflow) work in the same codebase and must know:**
+- ✅ **Temporal concepts** - tool developers edit workflow files
+- ✅ **Manual registration patterns** - across 4-5 files per tool
+- ✅ **Workflow internal structure** - must understand static_tool_names, get_handler(), etc.
+- ✅ **Activity patterns** - parameter validation spread across multiple files
+- ✅ **Goal-tool mapping** - manual references in goal files
 
-**🚧 Abstraction Boundary**:
-Tool developers **never need to know**:
-- How Temporal workflows manage state
-- Database schema or persistence mechanics
-- Retry policies or error handling strategies
-- Workflow signal/query patterns
-- Activity scheduling or task queues
+**📁 File Responsibilities (Current Coupling):**
+- **`workflows/`** - Tool developers edit `workflow_helpers.py` for static tool list
+- **`activities/`** - Contains manual parameter validation and type conversion
+- **`tools/`** - Tool developers edit multiple files: registry, init, individual tools
+- **`goals/`** - Tool developers reference tool registry imports
+- **`api/main.py`** - Central FastAPI server mixing workflow and tool concerns
 
-Tool developers **only need to know**:
-- Input parameter contracts (`ToolArgument` structure)
-- Expected response format (`Dict[str, Any]` with success/error patterns)
-- Goal association patterns (`goals/` directory structure)
-- MCP server configuration (if using external tools)
+**🚨 No Abstraction Boundary Exists:**
+Tool developers **currently MUST know**:
+- ❌ How tool registration works across multiple files
+- ❌ What `static_tool_names` is and why they need to maintain it
+- ❌ How `get_handler()` function works and add their tool to it
+- ❌ Tool registry import patterns in goal files
+- ❌ Parameter validation patterns in activities
+- ❌ Difference between native tools and MCP tools for routing
+
+**Current Reality:**
+- **No separation** - everything mixed in one codebase
+- **No abstraction** - tool developers touch workflow internals
+- **High coupling** - changes require editing multiple system files
+- **Manual processes** - prone to human error and forgotten steps
 
 ### Complete Execution Flow
 
@@ -388,9 +409,27 @@ class ToolDefinition:
 - Descriptive parameter names with clear types
 - Consistent description format across domains
 
-**Tool Development Pattern** - 3-Step Process:
+**Current Tool Development Process** - Complex 5-Step Manual Process:
 
-1. **Define Tool Metadata** (`tools/tool_registry.py`):
+1. **Create Tool Function** (`tools/search_flights.py`):
+```python
+def search_flights(args: Dict[str, Any]) -> Dict[str, Any]:
+    # Manual parameter extraction
+    origin = args.get("origin")
+    destination = args.get("destination")
+    
+    # Manual validation (no automation)
+    if not origin or not destination:
+        return {"error": "Missing required parameters"}
+    
+    # Business logic
+    result = perform_flight_search(origin, destination)
+    
+    # Manual response formatting
+    return {"tool": "SearchFlights", "success": True, "content": result}
+```
+
+2. **Manual Registry Definition** (`tools/tool_registry.py` - 20+ lines):
 ```python
 search_flights_tool = ToolDefinition(
     name="SearchFlights",
@@ -404,51 +443,57 @@ search_flights_tool = ToolDefinition(
 )
 ```
 
-2. **Implement Tool Logic** (`tools/search_flights.py`):
+3. **Manual Handler Registration** (`tools/__init__.py`):
 ```python
-# Tool developers only need this simple interface
-async def search_flights(args: Dict[str, Any]) -> Dict[str, Any]:
-    # 🔹 Input validation (your domain logic)
-    origin = args.get("origin")
-    destination = args.get("destination")
-    
-    # 🔹 Business logic (your expertise area)
-    result = perform_flight_search(origin, destination)
-    
-    # 🔹 Standard response format (required contract)
-    return {
-        "tool": "SearchFlights",
-        "success": True,
-        "content": result,  # Your business data
-    }
+# Add import
+from .search_flights import search_flights
+
+# Add to get_handler function
+def get_handler(tool_name: str):
+    if tool_name == "SearchFlights":  # Manual if/else
+        return search_flights
+    # ... 50+ other manual if statements
 ```
 
-3. **Associate with Goals** (`goals/travel.py`):
+4. **Manual Static List Maintenance** (`workflows/workflow_helpers.py`):
 ```python
+# Add to static_tool_names set
+static_tool_names = {
+    search_flights_tool.name,  # Must manually add
+    # ... 20+ other manual entries
+}
+```
+
+5. **Manual Goal Association** (`goals/travel.py`):
+```python
+import tools.tool_registry as tool_registry  # Manual import
+
 goal_travel_booking = AgentGoal(
-    id="goal_travel_booking",
-    tools=[search_flights_tool],  # Link your tool
+    id="goal_travel_booking", 
+    tools=[tool_registry.search_flights_tool],  # Manual reference
     description="Help users find and book flights",
 )
 ```
 
-**🚧 Temporal Abstraction Layer**:
+**❌ Current Reality: No Abstraction Layer**:
 
-What **Tool Developers DON'T Handle**:
-- ❌ Workflow state management
-- ❌ Database persistence 
-- ❌ Retry policies
-- ❌ Error recovery strategies
-- ❌ LLM integration
-- ❌ User confirmation flows
+What **Tool Developers Currently MUST Handle**:
+- ❌ **Manual tool registration** across 4-5 files
+- ❌ **Workflow file editing** (workflow_helpers.py static list)
+- ❌ **Handler function maintenance** (tools/__init__.py if/else chain)
+- ❌ **Tool registry imports** in goal files
+- ❌ **Parameter validation** manually in each tool
+- ❌ **Type conversion** manually in each tool
+- ❌ **Error handling patterns** inconsistently across tools
+- ❌ **Understanding Temporal concepts** to edit workflow files
 
-What **Temporal Server Handles Automatically**:
-- ✅ Activity execution and retries
-- ✅ State persistence and recovery
-- ✅ Tool routing and dispatch
-- ✅ User interaction management
-- ✅ Error handling and logging
-- ✅ Workflow orchestration
+What **Temporal Server Handles** (Limited):
+- ✅ Activity execution and retries (once tools are registered)
+- ✅ State persistence and recovery (workflow-level only)
+- ✅ User interaction management (workflow signals)
+- ✅ Basic error handling and logging (workflow-level)
+
+**The Problem**: Tool developers are forced into workflow internals instead of focusing on business logic.
 
 **MCP Tool Integration** (External Services):
 ```python
