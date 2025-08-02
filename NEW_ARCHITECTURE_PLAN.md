@@ -8,63 +8,147 @@ Transform the current manual tool registration system into an automated decorato
 
 ## 📊 **Current vs New Architecture Comparison**
 
-### **Current Architecture - Manual Registration**
+### **Current Architecture - Monolithic Manual System**
 
 ```mermaid
 graph TB
-    subgraph CurrentSystem ["🔧 Current Manual System"]
-        Developer[Tool Developer] --> CreateTool[Create Tool Function]
-        CreateTool --> ManualReg1[Manual: Add to tool_registry.py<br/>~20 lines per tool]
-        ManualReg1 --> ManualReg2[Manual: Add to __init__.py<br/>get_handler if/else]
-        ManualReg2 --> ManualReg3[Manual: Add to workflow_helpers.py<br/>static_tool_names list]
-        ManualReg3 --> ManualReg4[Manual: Add to goals/domain.py<br/>tool reference]
-        ManualReg4 --> ValidationLogic[Manual: Parameter validation<br/>in multiple files]
-        ValidationLogic --> TypeConvert[Manual: Type conversion<br/>in activities]
+    User[User Input] --> Frontend[React Frontend<br/>localhost:5173]
+    Frontend --> API[FastAPI Server<br/>localhost:8000]
+    API --> Temporal[Temporal Server<br/>localhost:7233]
+    Temporal --> Worker[Temporal Worker]
+    
+    subgraph MonolithicSystem ["🏗️ Single Monolithic Codebase - temporal-ai-agent"]
+        direction TB
+        Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
+        AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
+        AgentWorkflow --> ToolExecution[Tool Execution<br/>workflows/workflow_helpers.py]
         
-        subgraph Problems ["❌ Current Problems"]
-            Errors[Human Error Prone]
-            Maintenance[High Maintenance]
-            Knowledge[Temporal Knowledge Required]
-            Files[Must Edit 4-5 Files]
+        ToolExecution --> GetHandler[get_handler Function<br/>tools/__init__.py]
+        GetHandler --> NativeTools[Native Tool Functions<br/>tools/*/]
+        
+        ToolExecution --> MCPClient[MCP Client Manager<br/>shared/mcp_client_manager.py]
+        MCPClient --> ExternalMCP[External MCP Servers<br/>Stripe, etc.]
+        
+        subgraph ManualRegistration ["⚠️ Manual Tool Registration Process"]
+            ToolRegistry[tools/tool_registry.py<br/>Manual ToolDefinitions]
+            HandlerMapping[tools/__init__.py<br/>Manual if/else chain]
+            StaticList[workflows/workflow_helpers.py<br/>Manual static_tool_names]
+            GoalFiles[goals/*.py<br/>Manual tool references]
+        end
+        
+        subgraph DataLayer ["📊 Data Layer"]
+            Postgres[(PostgreSQL<br/>- Temporal Event History<br/>- Workflow State<br/>- Conversation Data)]
+            Temporal --> Postgres
+            LocalStorage[Browser LocalStorage<br/>- Chat History Cache]
+        end
+        
+        subgraph Infrastructure ["🏗️ Infrastructure"]
+            Docker[Docker Compose<br/>7 Containers:<br/>- temporal<br/>- postgresql<br/>- api<br/>- worker<br/>- train-api<br/>- frontend<br/>- temporal-ui]
         end
     end
     
-    classDef problem fill:#ffebee,stroke:#c62828,stroke-width:2px
-    class Problems problem
+    classDef monolith fill:#fff9c4,stroke:#f57f17,stroke-width:3px
+    classDef manual fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef dataBox fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef infraBox fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    
+    class MonolithicSystem monolith
+    class ManualRegistration manual
+    class DataLayer dataBox
+    class Infrastructure infraBox
 ```
 
-### **New Architecture - Auto-Discovery**
+**❌ Current Tool Development Reality:**
+
+Tool developers work directly in the monolithic codebase and must:
+
+1. **Create tool function** (`tools/fin/check_account_valid.py`)
+2. **Add manual definition** (`tools/tool_registry.py` - 20+ lines of ToolDefinition)
+3. **Add manual handler** (`tools/__init__.py` - if/else statement in get_handler())
+4. **Add to static list** (`workflows/workflow_helpers.py` - manual static_tool_names maintenance)
+5. **Reference in goal** (`goals/finance.py` - import and reference tool_registry)
+
+**Current Pain Points:**
+- ❌ **Manual registration** across 4-5 files per tool
+- ❌ **Human error prone** - easy to forget steps or make mistakes
+- ❌ **Temporal knowledge required** - must understand workflow internals
+- ❌ **No validation automation** - manual parameter checking everywhere
+- ❌ **High maintenance overhead** - 50+ manual if/else statements in get_handler()
+
+### **New Architecture - Enhanced Auto-Discovery System**
 
 ```mermaid
 graph TB
-    subgraph NewSystem ["🚀 Enhanced Auto-Discovery System"]
-        Developer[Tool Developer] --> DecoratedTool[Create Tool with @tool Decorator]
-        DecoratedTool --> AutoReg[Auto-Discovery Registry]
-        AutoReg --> AutoValidation[Auto Parameter Validation]
-        AutoValidation --> AutoType[Auto Type Conversion]
-        AutoType --> GoalRef[Reference in goals/domain.py]
+    User[User Input] --> Frontend[React Frontend<br/>localhost:5173]
+    Frontend --> API[FastAPI Server<br/>localhost:8000]
+    API --> Temporal[Temporal Server<br/>localhost:7233]
+    Temporal --> Worker[Temporal Worker]
+    
+    subgraph EnhancedSystem ["🚀 Enhanced Monolithic Codebase with Auto-Discovery"]
+        direction TB
+        Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
+        AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
+        AgentWorkflow --> ToolExecution[Tool Execution<br/>workflows/workflow_helpers.py]
         
-        subgraph AutoSystems ["✅ Automated Systems"]
-            AutoRegistry[Auto Tool Registry Generation]
-            AutoHandler[Auto Handler Mapping]
-            AutoStaticList[Auto Static Tools List]
-            AutoSchema[Auto Schema Validation]
+        ToolExecution --> AutoHandler[Auto get_handler Function<br/>tools/__init__.py]
+        AutoHandler --> DecoratedTools[Auto-Registered Tool Functions<br/>tools/*/ with @tool decorator]
+        
+        ToolExecution --> MCPClient[MCP Client Manager<br/>shared/mcp_client_manager.py]
+        MCPClient --> ExternalMCP[External MCP Servers<br/>Stripe, etc.]
+        
+        subgraph AutoDiscovery ["✅ Auto-Discovery Tool System"]
+            AutoRegistry[tools/decorators.py<br/>@tool Decorator Auto-Registration]
+            AutoValidation[tools/validation.py<br/>Auto Parameter Validation]
+            AutoDefinitions[Auto-Generated ToolDefinitions<br/>Runtime Discovery]
+            AutoStaticList[Auto-Generated static_tool_names<br/>Dynamic Loading]
         end
         
-        subgraph Benefits ["✅ Benefits"]
-            ZeroErrors[Zero Registration Errors]
-            Minimal[Minimal Maintenance]
-            NoTemporal[No Temporal Knowledge Needed]
-            OneFile[Edit Only 1 File]
+        subgraph DataLayer ["📊 Data Layer"]
+            Postgres[(PostgreSQL<br/>- Temporal Event History<br/>- Workflow State<br/>- Conversation Data)]
+            Temporal --> Postgres
+            LocalStorage[Browser LocalStorage<br/>- Chat History Cache]
+        end
+        
+        subgraph Infrastructure ["🏗️ Infrastructure"]
+            Docker[Docker Compose<br/>7 Containers:<br/>- temporal<br/>- postgresql<br/>- api<br/>- worker<br/>- train-api<br/>- frontend<br/>- temporal-ui]
         end
     end
     
-    classDef benefit fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef enhanced fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
     classDef auto fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef dataBox fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef infraBox fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     
-    class Benefits benefit
-    class AutoSystems auto
+    class EnhancedSystem enhanced
+    class AutoDiscovery auto
+    class DataLayer dataBox
+    class Infrastructure infraBox
 ```
+
+**✅ Enhanced Tool Development Reality:**
+
+Tool developers work with **simple decorator-based interface**:
+
+1. **Create tool function with @tool decorator** (`tools/fin/check_account_valid.py` ONLY)
+   ```python
+   @tool(name="CheckAccountValid", description="Validate account number")
+   def check_account_valid(account_number: str) -> Dict[str, Any]:
+       # Just business logic - everything else automated
+   ```
+
+2. **Reference in goal** (`goals/finance.py` - simple auto-discovery reference)
+   ```python
+   goal_finance = AgentGoal(
+       tools=auto_discover_tools(["CheckAccountValid", "GetTransactions"])
+   )
+   ```
+
+**New Benefits:**
+- ✅ **Zero registration errors** - automation prevents mistakes
+- ✅ **Single file editing** - only create your tool function
+- ✅ **No Temporal knowledge** - decorators handle workflow integration
+- ✅ **Auto validation** - type checking and parameter validation built-in
+- ✅ **Minimal maintenance** - no manual lists or handler functions
 
 ---
 
