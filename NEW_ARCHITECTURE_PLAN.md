@@ -33,13 +33,15 @@ graph TB
     end
     
     subgraph ExternalMCP ["🌐 <b>External MCP Ecosystem</b>"]
-        BusinessAPI["<b>Business API</b><br/><i>npx @company/business-mcp</i>"]
+        direction TB
+        BusinessAPI["<b>Business API Server</b><br/><i>npx @company/business-mcp</i>"]
         AnalyticsService["<b>Analytics Service</b><br/><i>npx @company/analytics-mcp</i>"]
         IntegrationHub["<b>Integration Hub</b><br/><i>npx @company/integration-mcp</i>"]
     end
     
-    subgraph Infrastructure ["🏗️ <b>Infrastructure</b>"]
-        Postgres[("<b>PostgreSQL</b><br/><i>Temporal Persistence</i>")]
+    subgraph Infrastructure ["🏗️ <b>Infrastructure Layer</b>"]
+        direction TB
+        Postgres[("<b>PostgreSQL Database</b><br/><i>Temporal Persistence</i>")]
         NPMRegistry[("<b>NPM Registry</b><br/><i>MCP Package Distribution</i>")]
     end
     
