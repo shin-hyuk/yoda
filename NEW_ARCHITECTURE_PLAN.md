@@ -221,4 +221,67 @@ graph TD
 
 Users never get "stuck" in a goal - they always have two escape routes. The agent selection hub serves as the universal switching point, providing instant gratification without needing to complete the current goal.
 
-The system supports both single-mode (locked to one agent) and multi-mode (flexible goal switching). YODA defaults to multi-mode to enable the agent orchestration layer and provide the best user experience.
+The system supports both single-mode (locked to one agent) and multi-mode (flexible goal switching). **YODA defaults to multi-mode to enable the agent orchestration layer and provide the best user experience.**
+
+---
+
+## **Response Schema & Examples Integration to MCP Schema**
+
+**Current State**: 
+- MCP servers only provide `inputSchema` for tool parameters
+- Goal teams manually write example responses in `example_conversation_history`
+- No formal output schema validation
+
+**Enhanced MCP Schema Integration:**
+
+```python
+# MCP Server: @company/auth-mcp
+{
+  "name": "ValidateJWT",
+  "description": "Validate user JWT token and extract permissions",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "jwt_token": {"type": "string", "description": "User JWT token"}
+    },
+    "required": ["jwt_token"]
+  },
+  "responseSchema": {
+    "type": "object", 
+    "properties": {
+      "valid": {"type": "boolean"},
+      "user_id": {"type": "string"},
+      "scopes": {"type": "array", "items": {"type": "string"}},
+      "expires_at": {"type": "string", "format": "date-time"}
+    }
+  },
+  "examples": {
+    "success": {
+      "valid": true,
+      "user_id": "user_123", 
+      "scopes": ["finance:read", "hr:write"],
+      "expires_at": "2024-01-15T10:30:00Z"
+    },
+    "error": {
+      "valid": false,
+      "error": "Token expired"
+    }
+  }
+}
+```
+
+**Implementation Purpose for Goal Teams:**
+
+This enhancement is specifically designed so **goal teams know exactly what responses are expected to be fed to the LLM**:
+
+1. **Schema + Examples**: Goal teams see precise response structure and concrete examples, eliminating guesswork
+2. **MCP-Informed Manual Writing**: Goal teams copy from MCP examples to design accurate agent conversations
+
+**Current example_conversation_history approach:**
+```python
+example_conversation_history="\n ".join([
+    "user_confirmed_tool_run: <user clicks confirm on ValidateJWT tool>",
+    "tool_result: { 'valid': true, 'user_id': 'user_123' }",  # Manual writing
+    "agent: Your token is valid!"
+])
+```
