@@ -1,14 +1,16 @@
-# Enhanced Temporal AI Agent - Auto-Discovery Architecture Plan
+# Enhanced Temporal AI Agent - MCP Auto-Discovery Architecture Plan
 
 ## 🎯 **Executive Summary**
 
-Transform the current manual tool registration system into an automated decorator-based architecture that eliminates 80% of manual boilerplate while maintaining full functionality and improving developer experience.
+Transform the current manual MCP server registration system into an automated endpoint-based discovery architecture that enables zero-deployment tool additions while maintaining full Temporal orchestration capabilities.
+
+**🔑 Key Insight:** The system is already MCP-first - we just need to make MCP server discovery automatic instead of manual.
 
 ---
 
 ## 📊 **Current vs New Architecture Comparison**
 
-### **Current Architecture - Monolithic Manual System**
+### **Current Architecture - Manual MCP Registration Pain Points**
 
 ```mermaid
 graph TB
@@ -17,65 +19,77 @@ graph TB
     API --> Temporal[Temporal Server<br/>localhost:7233]
     Temporal --> Worker[Temporal Worker]
     
-    subgraph MonolithicSystem ["🏗️ Single Monolithic Codebase - temporal-ai-agent"]
+    subgraph YodaBrain ["🧠 YODA - The Orchestrator Brain"]
         direction TB
         Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
         AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
-        AgentWorkflow --> ToolExecution[Tool Execution<br/>workflows/workflow_helpers.py]
+        AgentWorkflow --> MCPClientManager[MCP Client Manager<br/>shared/mcp_client_manager.py]
         
-        ToolExecution --> GetHandler[get_handler Function<br/>tools/__init__.py]
-        GetHandler --> NativeTools[Native Tool Functions<br/>tools/*/]
-        
-        ToolExecution --> MCPClient[MCP Client Manager<br/>shared/mcp_client_manager.py]
-        MCPClient --> ExternalMCP[External MCP Servers<br/>Stripe, etc.]
-        
-        subgraph ManualRegistration ["⚠️ Manual Tool Registration Process"]
-            ToolRegistry[tools/tool_registry.py<br/>Manual ToolDefinitions]
-            HandlerMapping[tools/__init__.py<br/>Manual if/else chain]
-            StaticList[workflows/workflow_helpers.py<br/>Manual static_tool_names]
-            GoalFiles[goals/*.py<br/>Manual tool references]
-        end
-        
-        subgraph DataLayer ["📊 Data Layer"]
-            Postgres[(PostgreSQL<br/>- Temporal Event History<br/>- Workflow State<br/>- Conversation Data)]
-            Temporal --> Postgres
-            LocalStorage[Browser LocalStorage<br/>- Chat History Cache]
-        end
-        
-        subgraph Infrastructure ["🏗️ Infrastructure"]
-            Docker[Docker Compose<br/>7 Containers:<br/>- temporal<br/>- postgresql<br/>- api<br/>- worker<br/>- train-api<br/>- frontend<br/>- temporal-ui]
+        subgraph ManualMCPPain ["⚠️ MANUAL MCP Server Registration Pain Points"]
+            direction TB
+            ManualConfig[shared/mcp_config.py<br/>Manual MCPServerDefinition]
+            ManualGoals[goals/stripe_mcp.py<br/>Manual mcp_server_definition wiring]
+            ManualCode[Code Changes Required<br/>For Every New MCP Server]
+            ManualDeploy[Full System Deployment<br/>Required for New Tools]
+            
+            ManualConfig --> ManualGoals
+            ManualGoals --> ManualCode  
+            ManualCode --> ManualDeploy
         end
     end
     
-    classDef monolith fill:#fff9c4,stroke:#f57f17,stroke-width:3px
-    classDef manual fill:#ffebee,stroke:#c62828,stroke-width:2px
-    classDef dataBox fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef infraBox fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    subgraph ExternalMCPWorld ["🌐 External MCP Server Ecosystem"]
+        direction TB
+        StripeServer[Stripe MCP Server<br/>npx @stripe/mcp]
+        FoodServer[Food Ordering MCP<br/>Restaurant APIs]
+        CustomServer[Custom Business MCP<br/>Internal APIs]
+        ThirdPartyServer[3rd Party MCP Servers<br/>External Services]
+        
+        StripeServer -.->|Manual Registration| ManualMCPPain
+        FoodServer -.->|Manual Registration| ManualMCPPain
+        CustomServer -.->|Manual Registration| ManualMCPPain
+        ThirdPartyServer -.->|Manual Registration| ManualMCPPain
+    end
     
-    class MonolithicSystem monolith
-    class ManualRegistration manual
-    class DataLayer dataBox
-    class Infrastructure infraBox
+    MCPClientManager --> StripeServer
+    MCPClientManager --> FoodServer
+    MCPClientManager --> CustomServer
+    
+    subgraph Infrastructure ["🏗️ Infrastructure Layer"]
+        Postgres[(PostgreSQL<br/>Temporal Persistence)]
+        Docker[Docker Compose<br/>Local Development]
+        Temporal --> Postgres
+    end
+    
+    classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef pain fill:#ffebee,stroke:#c62828,stroke-width:3px
+    classDef external fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef infra fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    
+    class YodaBrain brain
+    class ManualMCPPain pain
+    class ExternalMCPWorld external
+    class Infrastructure infra
 ```
 
-**❌ Current Tool Development Reality:**
+**❌ Current MCP Server Registration Reality:**
 
-Tool developers work directly in the monolithic codebase and must:
+To add a new MCP server/tool, developers must:
 
-1. **Create tool function** (`tools/fin/check_account_valid.py`)
-2. **Add manual definition** (`tools/tool_registry.py` - 20+ lines of ToolDefinition)
-3. **Add manual handler** (`tools/__init__.py` - if/else statement in get_handler())
-4. **Add to static list** (`workflows/workflow_helpers.py` - manual static_tool_names maintenance)
-5. **Reference in goal** (`goals/finance.py` - import and reference tool_registry)
+1. **Create MCPServerDefinition** (`shared/mcp_config.py`) - 15+ lines per server
+2. **Wire to goals manually** (`goals/*.py` - import and reference mcp_server_definition)
+3. **Deploy code changes** (restart entire system)
+4. **No runtime discovery** (tools only available after deployment)
+5. **Manual endpoint management** (no centralized registry)
 
 **Current Pain Points:**
-- ❌ **Manual registration** across 4-5 files per tool
-- ❌ **Human error prone** - easy to forget steps or make mistakes
-- ❌ **Temporal knowledge required** - must understand workflow internals
-- ❌ **No validation automation** - manual parameter checking everywhere
-- ❌ **High maintenance overhead** - 50+ manual if/else statements in get_handler()
+- ❌ **Code deployment required** for every new MCP server/tool
+- ❌ **Manual server definitions** across multiple files
+- ❌ **No dynamic discovery** - tools only available after restart
+- ❌ **Tight coupling** - MCP configs embedded in code
+- ❌ **Developer friction** - need to understand Temporal + Python for simple tool additions
 
-### **New Architecture - Enhanced Auto-Discovery System**
+### **New Architecture - MCP Auto-Discovery System**
 
 ```mermaid
 graph TB
@@ -84,140 +98,152 @@ graph TB
     API --> Temporal[Temporal Server<br/>localhost:7233]
     Temporal --> Worker[Temporal Worker]
     
-    subgraph EnhancedSystem ["🚀 Enhanced Monolithic Codebase with Auto-Discovery"]
+    subgraph YodaBrainEnhanced ["🧠 YODA - Enhanced Orchestrator Brain"]
         direction TB
         Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
         AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
-        AgentWorkflow --> ToolExecution[Tool Execution<br/>workflows/workflow_helpers.py]
+        AgentWorkflow --> MCPAutoDiscovery[MCP Auto-Discovery Manager<br/>shared/mcp_auto_discovery.py]
         
-        ToolExecution --> AutoHandler[Auto get_handler Function<br/>tools/__init__.py]
-        AutoHandler --> DecoratedTools["Auto-Registered Tool Functions<br/>tools/*/ with tool decorator"]
-        
-        ToolExecution --> MCPClient[MCP Client Manager<br/>shared/mcp_client_manager.py]
-        MCPClient --> ExternalMCP[External MCP Servers<br/>Stripe, etc.]
-        
-        subgraph AutoDiscovery ["✅ Auto-Discovery Tool System"]
-            AutoRegistry["tools/decorators.py<br/>Tool Decorator Auto-Registration"]
-            AutoValidation["tools/validation.py<br/>Auto Parameter Validation"]
-            AutoDefinitions["Auto-Generated ToolDefinitions<br/>Runtime Discovery"]
-            AutoStaticList["Auto-Generated static_tool_names<br/>Dynamic Loading"]
+        subgraph AutoMCPSystem ["✅ MCP Auto-Discovery System"]
+            direction TB
+            EndpointRegistry[MCP Endpoint Registry<br/>config/mcp_endpoints.json]
+            AutoDiscoverer[Runtime Tool Discovery<br/>Auto-scan MCP servers]
+            ToolCache[Dynamic Tool Cache<br/>In-memory tool definitions]
+            AutoValidator[Auto Parameter Validation<br/>From MCP schema]
+            
+            EndpointRegistry --> AutoDiscoverer
+            AutoDiscoverer --> ToolCache
+            ToolCache --> AutoValidator
         end
         
-        subgraph DataLayer ["📊 Data Layer"]
-            Postgres[(PostgreSQL<br/>- Temporal Event History<br/>- Workflow State<br/>- Conversation Data)]
-            Temporal --> Postgres
-            LocalStorage[Browser LocalStorage<br/>- Chat History Cache]
-        end
-        
-        subgraph Infrastructure ["🏗️ Infrastructure"]
-            Docker[Docker Compose<br/>7 Containers:<br/>- temporal<br/>- postgresql<br/>- api<br/>- worker<br/>- train-api<br/>- frontend<br/>- temporal-ui]
-        end
+        MCPAutoDiscovery --> AutoMCPSystem
     end
     
-    classDef enhanced fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
-    classDef auto fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef dataBox fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef infraBox fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    subgraph ExternalMCPEcosystem ["🌐 External MCP Server Ecosystem - Zero Deployment"]
+        direction TB
+        StripeServer[Stripe MCP Server<br/>https://stripe-mcp.company.com]
+        FoodServer[Food Ordering MCP<br/>https://food-mcp.company.com]
+        CustomServer[Custom Business MCP<br/>https://business-api.company.com]
+        NewServer[🆕 NEW MCP Server<br/>https://new-service.company.com]
+        
+        StripeServer -.->|Auto-Discovery| AutoMCPSystem
+        FoodServer -.->|Auto-Discovery| AutoMCPSystem
+        CustomServer -.->|Auto-Discovery| AutoMCPSystem
+        NewServer -.->|🔥 ZERO Code Changes| AutoMCPSystem
+    end
     
-    class EnhancedSystem enhanced
-    class AutoDiscovery auto
-    class DataLayer dataBox
-    class Infrastructure infraBox
+    MCPAutoDiscovery --> StripeServer
+    MCPAutoDiscovery --> FoodServer
+    MCPAutoDiscovery --> CustomServer
+    MCPAutoDiscovery --> NewServer
+    
+    subgraph Infrastructure ["🏗️ Infrastructure Layer"]
+        Postgres[(PostgreSQL<br/>Temporal Persistence)]
+        ConfigStore[(Configuration Store<br/>MCP Endpoint Registry)]
+        Docker[Docker Compose<br/>Local Development]
+        Temporal --> Postgres
+    end
+    
+    classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef auto fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class YodaBrainEnhanced brain
+    class AutoMCPSystem auto
+    class ExternalMCPEcosystem external
+    class Infrastructure infra
 ```
 
 ## 👥 **Perfect Team Separation**
 
-### **🛠️ Tool Development Team** (Technical Focus)
+**✅ Kevin's Vision Achieved:** *"adding a tool should be simply adding a mcp server endpoint, ideally without a new deployment"*
 
-**Responsibility**: Business logic implementation only
+### **🛠️ Tool Development Team** (Zero Deployment Focus)
 
-**Process**: Create ONE file per tool
-```python
-# tools/finance/credit_score.py (ONLY file to create)
-from tools.decorators import tool
-from models.tool_definitions import ToolArgument
+**Responsibility**: Create and deploy MCP servers independently
 
-@tool(
-    name="CheckCreditScore",
-    description="Check user's credit score", 
-    category="finance",
-    arguments=[
-        ToolArgument(name="ssn", type="string", description="Social Security Number"),
-        ToolArgument(name="email", type="string", description="User email address")
-    ]
-)
-def check_credit_score(args: dict) -> dict:
-    # ONLY business logic - validation handled by decorator
-    ssn = args.get("ssn")
-    email = args.get("email")
-    
-    credit_score = calculate_credit_score(ssn, email)
-    
-    return {
-        "success": True,
-        "credit_score": credit_score,
-        "rating": "Excellent" if credit_score > 750 else "Good"
+**Process**: Build standalone MCP server + Register endpoint
+```json
+// 1. Build MCP Server (any language/technology)
+// credit-score-mcp-server (Node.js, Python, Go, etc.)
+
+// 2. Deploy independently (Docker, K8s, serverless, etc.)
+// https://credit-score.company.com
+
+// 3. Register endpoint (ONLY step that touches YODA)
+// config/mcp_endpoints.json
+{
+  "endpoints": [
+    {
+      "name": "credit-score-service",
+      "url": "https://credit-score.company.com",
+      "category": "finance",
+      "description": "Credit scoring and financial verification tools",
+      "health_check": "/health",
+      "auto_discover": true
     }
+  ]
+}
 ```
 
 **Tool Developer Benefits:**
-- ✅ **Explicit control** - specify exactly what you need
-- ✅ **Clear naming** - no auto-conversion confusion
-- ✅ **Custom categories** - organize tools as needed
-- ✅ **Auto-registration** - no more manual registry editing
-- ✅ **Zero goal knowledge** - never touch goal files
+- ✅ **Complete independence** - any language, any framework
+- ✅ **Own deployment** - no coordination with YODA deployments
+- ✅ **Zero code changes** - only configuration registry
+- ✅ **Instant availability** - tools auto-discovered on endpoint registration
+- ✅ **Technology freedom** - not limited to Python/Temporal knowledge
 - ✅ **No Temporal concepts** - decorators handle workflow integration
 - ✅ **Auto-integration** - tools automatically available to appropriate agents
 
 ---
 
-### **🎨 Goal Manager Team** (Agent Design & UX Focus)
+### **🎨 Agent Design Team** (User Experience & Persona Focus)
 
 **Responsibility**: Agent personas, conversation flows, user experience
 
-**Process**: Design agents with flexible tool composition
+**Process**: Design agents with auto-discovered MCP tools
 ```python
 # goals/finance.py - Focus on agent behavior and UX
-from tools.auto_discovery import get_tools_by_category, auto_discover_tools
+from shared.mcp_auto_discovery import get_mcp_tools_by_category, get_mcp_tools_by_endpoint
 
 goal_fin_basic_assistant = AgentGoal(
     agent_name="Finance Assistant",
     agent_friendly_description="Help with basic banking and account management",
     starter_prompt="Hi! I can help you with your banking needs...",
     
-    # OPTION 1: Auto-discover ALL finance tools (zero maintenance)
-    tools=get_tools_by_category("finance")
+    # OPTION 1: Auto-discover ALL finance category MCP tools (zero maintenance)
+    mcp_tool_categories=["finance"]  # Auto-finds all MCP servers with category="finance"
 )
 
 goal_fin_account_specialist = AgentGoal(
     agent_name="Account Specialist", 
     agent_friendly_description="Specialized help for account balances and validation",
     
-    # OPTION 2: Hand-pick specific tools
-    tools=auto_discover_tools([
-        "FinCheckAccountIsValid",
-        "FinGetAccountBalances"
-    ])
+    # OPTION 2: Specific MCP endpoints
+    mcp_endpoints=[
+        "credit-score-service",
+        "account-validation-service"
+    ]  # Auto-discovers tools from these specific MCP servers
 )
 
 goal_fin_advanced_advisor = AgentGoal(
     agent_name="Financial Advisor",
     agent_friendly_description="Advanced financial planning and services",
     
-    # OPTION 3: Category with exclusions
-    tools=get_tools_by_category("finance", exclude=["FinHighRiskTrading"])
+    # OPTION 3: Category with endpoint exclusions
+    mcp_tool_categories=["finance"],
+    mcp_exclude_endpoints=["high-risk-trading-service"]
 )
 
 goal_fin_travel_concierge = AgentGoal(
     agent_name="Travel Finance Concierge",
     agent_friendly_description="Handle travel expenses and financial planning",
     
-    # OPTION 4: Mixed composition (multiple categories + specific tools)
-    tools=(
-        get_tools_by_category("finance", exclude=["FinAdvancedTrading"]) +
-        get_tools_by_category("travel") +
-        auto_discover_tools(["SendEmail", "ScheduleAppointment"])
-    )
+    # OPTION 4: Mixed composition (multiple categories + specific endpoints)
+    mcp_tool_categories=["finance", "travel"],
+    mcp_endpoints=["email-service", "calendar-service"],
+    mcp_exclude_endpoints=["advanced-trading-service"]
 )
 ```
 
@@ -230,43 +256,50 @@ goal_fin_travel_concierge = AgentGoal(
 
 ---
 
-### **🔄 Automatic Bridge Between Teams**
+### **🔄 Zero-Deployment Bridge Between Teams**
 
 ```mermaid
 graph LR
     subgraph ToolTeam [🛠️ Tool Development Team]
-        CreateTool[Create tools/finance/new_tool.py<br/>with @tool decorator]
+        BuildMCP[Build MCP Server<br/>any language/framework]
+        DeployMCP[Deploy Independently<br/>https://new-service.com]
+        RegisterEndpoint[Register in<br/>config/mcp_endpoints.json]
     end
     
-    subgraph System [🔧 Auto-Discovery System]
-        AutoRegistry[Auto-Registry by category<br/>tools/decorators.py]
-        CategoryAPI[get_tools_by_category API<br/>tools/auto_discovery.py]
+    subgraph YodaSystem [🧠 YODA Auto-Discovery System]
+        ScanEndpoints[Scan MCP Endpoints<br/>shared/mcp_auto_discovery.py]
+        DiscoverTools[Auto-Discover Tools<br/>Runtime MCP introspection]
+        CacheTools[Cache Tool Definitions<br/>In-memory registry]
     end
     
-    subgraph GoalTeam [🎨 Goal Manager Team]
+    subgraph AgentTeam [🎨 Agent Design Team]
         DesignAgent[Design agent behavior<br/>goals/finance.py]
-        UseTools[tools = get_tools_by_category finance]
+        SelectCategories[mcp_tool_categories = finance]
     end
     
-    CreateTool --> AutoRegistry
-    AutoRegistry --> CategoryAPI
-    CategoryAPI --> UseTools
-    UseTools --> DesignAgent
+    BuildMCP --> DeployMCP
+    DeployMCP --> RegisterEndpoint
+    RegisterEndpoint --> ScanEndpoints
+    ScanEndpoints --> DiscoverTools
+    DiscoverTools --> CacheTools
+    CacheTools --> SelectCategories
+    SelectCategories --> DesignAgent
     
     classDef toolTeam fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef goalTeam fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef agentTeam fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef system fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     
     class ToolTeam toolTeam
-    class GoalTeam goalTeam
-    class System system
+    class AgentTeam agentTeam
+    class YodaSystem system
 ```
 
-**Perfect Workflow:**
-1. **Tool developers** create `tools/{domain}/{tool}.py` with `category="finance"`
-2. **System** automatically registers tools by category
-3. **Goal managers** use flexible tool selection in `goals/{domain}.py`
-4. **Zero coordination needed** between teams!
+**Perfect Zero-Deployment Workflow:**
+1. **Tool developers** build + deploy MCP server independently (any tech stack)
+2. **Tool developers** register endpoint in `config/mcp_endpoints.json` (only YODA touch)
+3. **YODA** automatically discovers tools from registered MCP endpoints
+4. **Agent designers** select tools by category or endpoint - instantly available!
+5. **Zero coordination needed** between teams! **Zero YODA deployments!**
 
 ---
 
