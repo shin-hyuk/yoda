@@ -8,6 +8,117 @@ Document the current MCP server integration system and explore potential enhance
 
 ---
 
+## ⚙️ **Temporal Workflow Mechanics**
+
+**YODA's Core Advantage**: Temporal provides durable, stateful orchestration where conversations and tool executions persist across interruptions, restarts, and failures.
+
+### **Complete Execution Flow**
+
+```mermaid
+graph TB
+    subgraph Frontend ["🌐 Frontend Layer"]
+        UserPrompt["User Prompt<br/>'Book flight to NYC'"]
+        ApiCall["POST /send-prompt<br/>{ prompt, session_context }"]
+    end
+    
+    subgraph FastAPI ["⚡ FastAPI Server"]
+        EndpointHandler["send_prompt()<br/>api/main.py"]
+        WorkflowStart["temporal_client.start_workflow()<br/>AgentGoalWorkflow.run"]
+    end
+    
+    subgraph TemporalServer ["🔄 Temporal Server (localhost:7233)"]
+        WorkflowQueue["Workflow Task Queue<br/>TEMPORAL_TASK_QUEUE"]
+        ActivityQueue["Activity Task Queue<br/>Tool executions"]
+        StateStore["Workflow State Storage<br/>PostgreSQL persistence"]
+    end
+    
+    subgraph TemporalWorker ["🧠 Temporal Worker (YODA Core)"]
+        WorkflowExec["AgentGoalWorkflow.run()<br/>workflows/agent_goal_workflow.py"]
+        LLMActivity["LLM Activities<br/>activities/tool_activities.py"]
+        MCPActivity["MCP Tool Activities<br/>dynamic execution"]
+        StateManagement["Conversation State<br/>self.messages, self.tool_results"]
+    end
+    
+    subgraph MCPServers ["🔧 External MCP Servers"]
+        AuthMCP["Auth MCP<br/>JWT validation"]
+        BusinessMCP["Business MCP<br/>Flight booking tools"]
+        AnalyticsMCP["Analytics MCP<br/>Data tools"]
+    end
+    
+    %% Flow connections
+    UserPrompt --> ApiCall
+    ApiCall --> EndpointHandler
+    EndpointHandler --> WorkflowStart
+    WorkflowStart --> WorkflowQueue
+    WorkflowQueue --> WorkflowExec
+    
+    %% Workflow execution
+    WorkflowExec --> StateManagement
+    WorkflowExec --> LLMActivity
+    WorkflowExec --> MCPActivity
+    
+    %% State persistence
+    StateManagement --> StateStore
+    StateStore --> StateManagement
+    
+    %% MCP tool calls
+    MCPActivity --> AuthMCP
+    MCPActivity --> BusinessMCP
+    MCPActivity --> AnalyticsMCP
+    
+    %% Activity scheduling
+    LLMActivity --> ActivityQueue
+    MCPActivity --> ActivityQueue
+    ActivityQueue --> LLMActivity
+    ActivityQueue --> MCPActivity
+    
+    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef api fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef temporal fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef worker fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef mcp fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class Frontend frontend
+    class FastAPI api
+    class TemporalServer temporal
+    class TemporalWorker worker
+    class MCPServers mcp
+```
+
+### **Temporal State Persistence Advantages**
+
+**1. Conversation Continuity**: All messages, tool results, and workflow state stored in PostgreSQL
+```python
+# workflows/agent_goal_workflow.py
+self.messages: List[Dict] = []  # Persisted across restarts
+self.tool_results: List[Dict] = []  # Survives worker crashes
+self.conversation_summary = ""  # Maintained during interruptions
+```
+
+**2. Durable Tool Execution**: MCP tool calls are Temporal activities with automatic retry
+```python
+# If worker crashes during MCP call, Temporal automatically:
+# - Resumes from last checkpoint
+# - Retries failed activities
+# - Maintains exact conversation state
+dynamic_result = await workflow.execute_activity(
+    tool_name, args,
+    retry_policy=RetryPolicy(initial_interval=timedelta(seconds=5))
+)
+```
+
+**3. Signal-Based Interaction**: User confirmations handled as workflow signals
+```python
+# User can confirm tools while workflow maintains state
+@workflow.signal
+def user_prompt(self, prompt: str):
+    self.prompt_queue.append(prompt)  # State persisted
+```
+
+**Key Difference from Stateless Systems**: Traditional chatbots lose context on restart. YODA maintains exact conversation state, tool execution progress, and user interaction history through any system interruption.
+
+---
+
 ## 📊 **Architecture Overview**
 
 ### **MCP Server Integration Architecture**
@@ -65,6 +176,10 @@ graph TB
 ## 👥 **Team Separation Pattern**
 
 ### **🛠️ Tool Development Team**
+
+**Responsibility**: Build and maintain MCP servers, develop business tools, ensure API integrations
+
+**Process**: Create MCP servers with proper tool schemas and publish to NPM
 ```bash
 # 1. Build MCP Server following MCP protocol standard
 # Node.js, Python, Go, etc. - any language that can create NPM executable
@@ -373,7 +488,7 @@ The business MCP server validates the JWT token and scopes before executing the 
 
 ## **Alert & Schedule System Architecture**
 
-**Use Case**: Users can set alerts ("notify when BTC drops 5%") and schedules ("sell when BTC rises 5%") through natural language interaction with YODA.
+**Use Case**: Users can set alerts ("notify when BTC drops 5%") and schedules ("sell when BTC rises 5%") through natural language interaction with YODA. Once the user connects to MCP servers with their JWT token through session ID, the orchestrator reads all alerts and schedules from the unified PostgreSQL database and displays them in the notification area of the chat interface.
 
 ### **Implementation Overview**
 
@@ -410,9 +525,5 @@ schedules_table: user_id, action, condition, status (pending/executed/failed), c
 **Status Types**:
 - **Alerts**: `active`, `triggered`, `dismissed`
 - **Schedules**: `pending`, `executed`, `failed`
-
-**User Flow Examples**:
-- **Alert**: "Let me know when my BTC value goes down more than 5%" → Creates alert entry with user's JWT token
-- **Schedule**: "Sell my BTC once it goes up 5%" → Creates schedule entry with execution logic
 
 This extends YODA from a conversational agent to a persistent orchestration platform where users can set long-term automation and monitoring across all their integrated business tools.
