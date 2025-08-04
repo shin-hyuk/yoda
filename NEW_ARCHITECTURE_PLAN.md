@@ -98,38 +98,12 @@ graph TB
 
 **✅ Kevin's Vision Already Working:** *"adding a tool should be simply adding a mcp server endpoint, ideally without a new deployment"*
 
-### **💡 Potential Enhancement: NPM Naming Convention Auto-Discovery**
-
-**Current Approach (Working Well):**
-- Manual addition to `shared/mcp_config.py` (~10 lines per server)
-- Full control over configuration, environment variables, custom args
-- Clear documentation of available servers
-
-**Potential Enhancement:**
-If tool teams follow a standardized NPM naming convention:
-```bash
-# Tool teams publish with consistent naming
-npm publish @company/mcp-banking
-npm publish @company/mcp-payments  
-npm publish @company/mcp-analytics
-```
-
-Then system could potentially auto-discover:
-```python
-# Auto-discover @company/mcp-* packages
-def auto_discover_company_mcp_servers():
-    # Scan for @company/mcp-* packages
-    # Auto-generate MCPServerDefinition objects
-    # But lose: custom env vars, specific args, fine-grained control
-```
-
-**Trade-offs:**
-- ✅ **Pro**: Zero manual registration for standard cases
-- ❌ **Con**: Less flexibility for custom configuration per server
-- ❌ **Con**: Lose environment variable handling per server
-- ❌ **Con**: Less explicit documentation of what's available
-
-**Recommendation**: Current manual approach in `mcp_config.py` provides good balance of ease-of-use and control.
+The current system in `shared/mcp_config.py` provides the optimal balance of:
+- ✅ **Centralized registry** - all MCP servers in one place
+- ✅ **Custom configuration** - environment variables, custom args per server  
+- ✅ **Clear documentation** - explicit function definitions with docstrings
+- ✅ **Fine-grained control** - include/exclude specific tools per server
+- ✅ **Minimal overhead** - only ~10 lines per server
 
 ### **🛠️ Tool Development Team**
 
