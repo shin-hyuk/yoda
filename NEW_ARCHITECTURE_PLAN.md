@@ -368,3 +368,44 @@ JWT tokens will be obtained from the Auth MCP server using the session ID passed
 ```
 
 The business MCP server validates the JWT token and scopes before executing the requested tool, ensuring users only access authorized data.
+
+---
+
+## **Alert & Schedule System Architecture**
+
+**Use Case**: Users can set alerts ("notify when BTC drops 5%") and schedules ("sell when BTC rises 5%") through natural language interaction with YODA, creating a global orchestration system accessible from anywhere.
+
+### **Implementation Overview**
+
+**Database Extension**: Add alerts and schedules tables to existing PostgreSQL (Temporal persistence database):
+
+```sql
+-- User alerts/schedules identified by JWT token
+alerts_table: user_id, condition, status (active/triggered/dismissed), created_at
+schedules_table: user_id, action, condition, status (pending/executed/failed), created_at
+```
+
+**Frontend Enhancement**: Add notification area above the chat interface:
+
+```javascript
+// New UI component above search box
+<AlertsScheduleBox>
+  <Alerts>
+    • BTC Alert: -5% trigger (active)
+    • Unpaid Fee: $50 overdue (triggered)
+  </Alerts>
+  <Schedules>
+    • BTC Sell: +5% trigger (pending)
+    • Monthly Report: Completed ✓
+  </Schedules>
+</AlertsScheduleBox>
+```
+
+**User Flow Examples**:
+- **Alert**: "Let me know when my BTC value goes down more than 5%" → Creates alert entry with user's JWT token
+- **Schedule**: "Sell my BTC once it goes up 5%" → Creates schedule entry with execution logic
+- **Global Access**: Users can interact with YODA from any location, all alerts/schedules tracked by JWT identity
+
+**Status Types**: `active`, `triggered`, `executed`, `failed`, `dismissed`, `completed`
+
+This extends YODA from a conversational agent to a persistent orchestration platform where users can set long-term automation and monitoring across all their integrated business tools.
