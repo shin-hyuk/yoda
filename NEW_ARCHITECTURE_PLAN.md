@@ -125,37 +125,148 @@ graph TB
     class Infrastructure infraBox
 ```
 
-**✅ Enhanced Tool Development Reality:**
+## 👥 **Perfect Team Separation**
 
-Tool developers work with **simple decorator-based interface**:
+### **🛠️ Tool Development Team** (Technical Focus)
 
-1. **Create tool function with @tool decorator** (`tools/fin/check_account_valid.py` ONLY)
-   ```python
-   @tool(name="CheckAccountValid", description="Validate account number")
-   def check_account_valid(account_number: str) -> Dict[str, Any]:
-       # Just business logic - everything else automated
-   ```
+**Responsibility**: Business logic implementation only
 
-2. **Reference in goal** (`goals/finance.py` - **FULLY AUTOMATED**)
-   ```python
-   # BEFORE: Manual imports and manual tool references (3+ lines per tool)
-   import tools.tool_registry as tool_registry
-   tools=[
-       tool_registry.financial_check_account_is_valid,
-       tool_registry.financial_get_account_balances,
-       tool_registry.financial_move_money,
-   ]
-   
-   # AFTER: Auto-discovery by name (1 line)
-   tools=auto_discover_tools(["FinCheckAccountIsValid", "FinGetAccountBalances", "FinMoveMoney"])
-   ```
+**Process**: Create ONE file per tool
+```python
+# tools/finance/credit_score.py (ONLY file to create)
+from tools.decorators import tool
+from models.tool_definitions import ToolArgument
 
-**New Benefits:**
-- ✅ **Zero registration errors** - automation prevents mistakes
-- ✅ **Single file editing** - only create your tool function
-- ✅ **No Temporal knowledge** - decorators handle workflow integration
-- ✅ **Auto validation** - type checking and parameter validation built-in
-- ✅ **Minimal maintenance** - no manual lists or handler functions
+@tool(
+    name="CheckCreditScore",
+    description="Check user's credit score", 
+    category="finance",
+    arguments=[
+        ToolArgument(name="ssn", type="string", description="Social Security Number"),
+        ToolArgument(name="email", type="string", description="User email address")
+    ]
+)
+def check_credit_score(args: dict) -> dict:
+    # ONLY business logic - validation handled by decorator
+    ssn = args.get("ssn")
+    email = args.get("email")
+    
+    credit_score = calculate_credit_score(ssn, email)
+    
+    return {
+        "success": True,
+        "credit_score": credit_score,
+        "rating": "Excellent" if credit_score > 750 else "Good"
+    }
+```
+
+**Tool Developer Benefits:**
+- ✅ **Explicit control** - specify exactly what you need
+- ✅ **Clear naming** - no auto-conversion confusion
+- ✅ **Custom categories** - organize tools as needed
+- ✅ **Auto-registration** - no more manual registry editing
+- ✅ **Zero goal knowledge** - never touch goal files
+- ✅ **No Temporal concepts** - decorators handle workflow integration
+- ✅ **Auto-integration** - tools automatically available to appropriate agents
+
+---
+
+### **🎨 Goal Manager Team** (Agent Design & UX Focus)
+
+**Responsibility**: Agent personas, conversation flows, user experience
+
+**Process**: Design agents with flexible tool composition
+```python
+# goals/finance.py - Focus on agent behavior and UX
+from tools.auto_discovery import get_tools_by_category, auto_discover_tools
+
+goal_fin_basic_assistant = AgentGoal(
+    agent_name="Finance Assistant",
+    agent_friendly_description="Help with basic banking and account management",
+    starter_prompt="Hi! I can help you with your banking needs...",
+    
+    # OPTION 1: Auto-discover ALL finance tools (zero maintenance)
+    tools=get_tools_by_category("finance")
+)
+
+goal_fin_account_specialist = AgentGoal(
+    agent_name="Account Specialist", 
+    agent_friendly_description="Specialized help for account balances and validation",
+    
+    # OPTION 2: Hand-pick specific tools
+    tools=auto_discover_tools([
+        "FinCheckAccountIsValid",
+        "FinGetAccountBalances"
+    ])
+)
+
+goal_fin_advanced_advisor = AgentGoal(
+    agent_name="Financial Advisor",
+    agent_friendly_description="Advanced financial planning and services",
+    
+    # OPTION 3: Category with exclusions
+    tools=get_tools_by_category("finance", exclude=["FinHighRiskTrading"])
+)
+
+goal_fin_travel_concierge = AgentGoal(
+    agent_name="Travel Finance Concierge",
+    agent_friendly_description="Handle travel expenses and financial planning",
+    
+    # OPTION 4: Mixed composition (multiple categories + specific tools)
+    tools=(
+        get_tools_by_category("finance", exclude=["FinAdvancedTrading"]) +
+        get_tools_by_category("travel") +
+        auto_discover_tools(["SendEmail", "ScheduleAppointment"])
+    )
+)
+```
+
+**Goal Manager Benefits:**
+- ✅ **Design freedom** - choose the best tool composition for each agent
+- ✅ **Zero tool maintenance** - new tools automatically available via categories
+- ✅ **Fine control** - include/exclude exactly what you want
+- ✅ **Focus on UX** - agent personalities, conversation flows, user experience
+- ✅ **Always up-to-date** - rest assured all tools are automatically exposed
+
+---
+
+### **🔄 Automatic Bridge Between Teams**
+
+```mermaid
+graph LR
+    subgraph ToolTeam [🛠️ Tool Development Team]
+        CreateTool[Create tools/finance/new_tool.py<br/>with @tool decorator]
+    end
+    
+    subgraph System [🔧 Auto-Discovery System]
+        AutoRegistry[Auto-Registry by category<br/>tools/decorators.py]
+        CategoryAPI[get_tools_by_category API<br/>tools/auto_discovery.py]
+    end
+    
+    subgraph GoalTeam [🎨 Goal Manager Team]
+        DesignAgent[Design agent behavior<br/>goals/finance.py]
+        UseTools[tools=get_tools_by_category("finance")]
+    end
+    
+    CreateTool --> AutoRegistry
+    AutoRegistry --> CategoryAPI
+    CategoryAPI --> UseTools
+    UseTools --> DesignAgent
+    
+    classDef toolTeam fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef goalTeam fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef system fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    
+    class ToolTeam toolTeam
+    class GoalTeam goalTeam
+    class System system
+```
+
+**Perfect Workflow:**
+1. **Tool developers** create `tools/{domain}/{tool}.py` with `category="finance"`
+2. **System** automatically registers tools by category
+3. **Goal managers** use flexible tool selection in `goals/{domain}.py`
+4. **Zero coordination needed** between teams!
 
 ---
 
@@ -222,9 +333,7 @@ def tool(
     name: str,
     description: str,
     arguments: List[ToolArgument] = None,
-    category: str = None,
-    scopes: List[str] = None,
-    timeout_seconds: int = 30
+    category: str = None
 ):
     """
     Auto-discovery tool decorator with built-in validation
@@ -233,11 +342,10 @@ def tool(
         name="GetAccountBalance",
         description="Get user account balances",
         arguments=[
-            ToolArgument(name="email", type="string", required=True),
-            ToolArgument(name="account_id", type="string", required=True)
+            ToolArgument(name="email", type="string", description="User email"),
+            ToolArgument(name="account_id", type="string", description="Account ID")
         ],
-        category="finance",
-        scopes=["finance:read"]
+        category="finance"
     )
     """
     def decorator(func: Callable) -> Callable:
@@ -246,8 +354,8 @@ def tool(
         func._tool_description = description
         func._tool_arguments = arguments or []
         func._tool_category = category
-        func._tool_scopes = scopes or []
-        func._tool_timeout = timeout_seconds
+
+
         
         # Create ToolDefinition
         tool_definition = ToolDefinition(
@@ -414,7 +522,7 @@ from models.tool_definitions import ToolArgument
         ToolArgument(name="account_id", type="string", description="Account ID to validate")
     ],
     category="finance",
-    scopes=["finance:read"]
+
 )
 def check_account_valid(args: dict) -> dict:
     email = args.get("email")  # Now auto-validated and type-converted
@@ -446,6 +554,10 @@ def check_account_valid(args: dict) -> dict:
 20. `tools/give_hint.py`
 21. `tools/guess_location.py`
 22. `tools/transfer_control.py`
+
+### **📝 ENHANCED DATA MODELS**
+
+
 
 ### **🔄 FILES to be MODIFIED/SIMPLIFIED**
 
