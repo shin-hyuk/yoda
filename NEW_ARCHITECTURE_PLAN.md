@@ -344,97 +344,27 @@ graph TD
     class BusinessMCP business
 ```
 
-### **Implementation Changes (Minimal)**
+JWT tokens will be obtained from the Auth MCP server using the session ID passed from the frontend. These tokens are then used to provide authorization restrictions, controlling which tools and data each user can access within the platform.
 
-**1. Frontend Changes (~3 lines)**
-```javascript
-// frontend/src/services/api.js
-async sendMessage(message) {
-    const sessionId = window.portalSession?.id;  // ← NEW: Get from embedded context
-    const res = await fetch(`${API_BASE_URL}/send-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            prompt: message,
-            session_context: { sessionId }  // ← NEW: Pass session
-        })
-    });
-}
-```
+**Example JWT Flow:**
 
-**2. Backend Changes (~5 lines)**
-```python
-# api/main.py
-@app.post("/send-prompt")
-async def send_prompt(request: dict):
-    prompt = request.get("prompt")
-    session_context = request.get("session_context")  # ← NEW
-    
-    combined_input = CombinedInput(
-        tool_params=AgentGoalWorkflowParams(None, None),
-        agent_goal=get_initial_agent_goal(),
-        session_context=session_context  # ← NEW
-    )
-```
-
-**3. Workflow Changes (~8 lines)**
-```python
-# workflows/agent_goal_workflow.py
-async def run(self, combined_input: CombinedInput):
-    self.session_context = combined_input.session_context  # ← NEW
-    
-    # Get JWT if session provided
-    if self.session_context:
-        jwt_result = await workflow.execute_activity(
-            "GetJWTFromSession",  # ← NEW MCP tool (auth-mcp server)
-            self.session_context
-        )
-        self.jwt_token = jwt_result.get("jwt_token")  # ← NEW
-```
-
-**4. Tool Execution Changes (~2 lines)**
-```python
-# workflows/workflow_helpers.py
-mcp_args = tool_data["args"].copy()
-mcp_args["server_definition"] = goal.mcp_server_definition
-if hasattr(workflow_instance, 'jwt_token'):
-    mcp_args["jwt_token"] = workflow_instance.jwt_token  # ← NEW
-```
-
-### **New MCP Server: @company/auth-mcp**
-
-```python
-# This is a NEW MCP server (external to YODA)
+**1. Auth MCP Response:**
+```json
 {
-  "name": "GetJWTFromSession",
-  "description": "Exchange portal session ID for JWT token",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "sessionId": {"type": "string", "description": "Portal session identifier"}
-    },
-    "required": ["sessionId"]
-  },
-  "responseSchema": {
-    "type": "object",
-    "properties": {
-      "jwt_token": {"type": "string"},
-      "user_id": {"type": "string"},
-      "scopes": {"type": "array", "items": {"type": "string"}},
-      "expires_at": {"type": "string", "format": "date-time"}
-    }
-  },
-  "examples": {
-    "success": {
-      "jwt_token": "eyJhbGciOiJIUzI1NiIs...",
-      "user_id": "user_123",
-      "scopes": ["finance:read", "hr:write"],
-      "expires_at": "2024-01-15T10:30:00Z"
-    }
-  }
+  "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user_id": "user_123",
+  "scopes": ["csr", "ops", "sales"],
+  "expires_at": "2024-01-15T10:30:00Z"
 }
 ```
 
-**Total YODA Changes: ~18 lines across 4 files**
+**2. Business MCP Tool Request (with JWT):**
+```json
+{
+  "date_range": "2024-01-01,2024-01-31",
+  "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  // jwt_token includes customer_id
+}
+```
 
-**Why So Minimal?** YODA's MCP architecture is already designed for this - we're just adding session context to the existing flow and using MCP tools for authentication just like any other business logic.
+The business MCP server validates the JWT token and scopes before executing the requested tool, ensuring users only access authorized data.
