@@ -12,87 +12,59 @@ Document the current MCP server integration system and explore potential enhance
 
 ### **MCP Server Integration Architecture**
 
-**How It Works:**
-
-To add a new MCP server/tool:
-
-1. **Add MCPServerDefinition** (`shared/mcp_config.py`) - ~10 lines per server in centralized registry
-2. **Reference in goals** (`goals/*.py` - import and reference mcp_server_definition)
-3. **NPM package distribution** - no system restart required
-4. **Runtime tool discovery** - tools automatically discovered via mcp_list_tools
-5. **Centralized configuration** - all MCP servers defined in shared/mcp_config.py
-
-**System Capabilities:**
-- ✅ **NPM package support** - servers can be published and consumed via NPM
-- ✅ **Centralized definitions** - all MCP servers defined in shared/mcp_config.py
-- ✅ **Dynamic discovery** - tools automatically discovered at runtime
-- ✅ **Technology freedom** - any language that can create NPM executables
-- ✅ **Zero Temporal knowledge** - tool developers just follow MCP protocol
+**Quick Setup:**
+1. Add server definition to `shared/mcp_config.py`
+2. Reference in goal files 
+3. Publish via NPM
+4. Tools auto-discovered at runtime
 
 ```mermaid
 graph TB
-    User[User Input] --> Frontend[React Frontend<br/>localhost:5173]
-    Frontend --> API[FastAPI Server<br/>localhost:8000]
-    API --> Temporal[Temporal Server<br/>localhost:7233]
-    Temporal --> Worker[Temporal Worker]
+    User["<b>User Input</b>"] --> Frontend["<b>React Frontend</b><br/><i>localhost:5173</i>"]
+    Frontend --> API["<b>FastAPI Server</b><br/><i>localhost:8000</i>"]
+    API --> Temporal["<b>Temporal Server</b><br/><i>localhost:7233</i>"]
     
-    subgraph YodaBrain ["🧠 YODA - The Orchestrator Brain"]
-        direction TB
-        Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
-        AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
-        AgentWorkflow --> MCPClientManager[MCP Client Manager<br/>shared/mcp_client_manager.py]
-        
-        RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
-        MCPClientManager --> RuntimeDiscovery
+    subgraph YodaBrain ["🧠 <b>YODA - The Orchestrator Brain</b>"]
+        Temporal --> Worker["<b>Temporal Worker</b>"]
+        Worker --> AgentWorkflow["<b>AgentGoalWorkflow</b><br/><i>workflows/agent_goal_workflow.py</i>"]
+        AgentWorkflow --> LLMActivity["<b>LLM Activities</b><br/><i>activities/tool_activities.py</i>"]
+        AgentWorkflow --> MCPClientManager["<b>MCP Client Manager</b><br/><i>shared/mcp_client_manager.py</i>"]
+        MCPClientManager --> RuntimeDiscovery["<b>Runtime Tool Discovery</b><br/><i>mcp_list_tools activity</i>"]
     end
     
-    subgraph ExternalMCPEcosystem ["🌐 External MCP Server Ecosystem - NPM Based"]
-        direction TB
-        BusinessAPI[Business API Server<br/>npx @company/business-mcp]
-        AnalyticsService[Analytics Service<br/>npx @company/analytics-mcp]
-        IntegrationHub[Integration Hub<br/>npx @company/integration-mcp]
-        
-        BusinessAPI -.->|Runtime Discovery| RuntimeDiscovery
-        AnalyticsService -.->|Runtime Discovery| RuntimeDiscovery
-        IntegrationHub -.->|Runtime Discovery| RuntimeDiscovery
+    subgraph ExternalMCP ["🌐 <b>External MCP Ecosystem</b>"]
+        BusinessAPI["<b>Business API</b><br/><i>npx @company/business-mcp</i>"]
+        AnalyticsService["<b>Analytics Service</b><br/><i>npx @company/analytics-mcp</i>"]
+        IntegrationHub["<b>Integration Hub</b><br/><i>npx @company/integration-mcp</i>"]
     end
     
+    subgraph Infrastructure ["🏗️ <b>Infrastructure</b>"]
+        Postgres[("<b>PostgreSQL</b><br/><i>Temporal Persistence</i>")]
+        NPMRegistry[("<b>NPM Registry</b><br/><i>MCP Package Distribution</i>")]
+    end
+    
+    %% Connections
     MCPClientManager --> BusinessAPI
-    MCPClientManager --> AnalyticsService
+    MCPClientManager --> AnalyticsService  
     MCPClientManager --> IntegrationHub
-    
-    subgraph Infrastructure ["🏗️ Infrastructure Layer"]
-        Postgres[(PostgreSQL<br/>Temporal Persistence)]
-        NPMRegistry[(NPM Registry<br/>MCP Package Distribution)]
-        Temporal --> Postgres
-        ExternalMCPEcosystem --> NPMRegistry
-    end
+    BusinessAPI -.->|Discovery| RuntimeDiscovery
+    AnalyticsService -.->|Discovery| RuntimeDiscovery
+    IntegrationHub -.->|Discovery| RuntimeDiscovery
+    Temporal --> Postgres
+    ExternalMCP --> NPMRegistry
     
     classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
     classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     
     class YodaBrain brain
-    class ExternalMCPEcosystem external
+    class ExternalMCP external
     class Infrastructure infra
 ```
 
 ## 👥 **Team Separation Pattern**
 
-**✅ Kevin's Vision Already Working:** *"adding a tool should be simply adding a mcp server endpoint, ideally without a new deployment"*
-
-The current system in `shared/mcp_config.py` provides the optimal balance of:
-- ✅ **Centralized registry** - all MCP servers in one place
-- ✅ **Custom configuration** - environment variables, custom args per server  
-- ✅ **Clear documentation** - explicit function definitions with docstrings
-- ✅ **Fine-grained control** - include/exclude specific tools per server
-- ✅ **Minimal overhead** - only ~10 lines per server
-
 ### **🛠️ Tool Development Team**
-
-**Responsibility**: Create and publish MCP servers as NPM packages
-
-**Process**: Build MCP server + Publish to NPM + Notify goal team
 ```bash
 # 1. Build MCP Server following MCP protocol standard
 # Node.js, Python, Go, etc. - any language that can create NPM executable
@@ -117,15 +89,6 @@ npm publish @company/business-mcp
 # 4. Notify goal team
 "Hey, we added @company/business-mcp with order management and customer tools"
 ```
-
-**Tool Developer Benefits:**
-- ✅ **Develop MCP server** following standard MCP protocol
-- ✅ **Upload to NPM** like `@company/business-mcp` 
-- ✅ **Notify goal team** - "Hey, we added `@company/business-mcp`"
-- ✅ **Zero YODA knowledge** - just follow MCP protocol standards
-- ✅ **Technology freedom** - any language that can create executables
-- ✅ **No Temporal concepts** - system handles workflow integration
-- ✅ **Runtime integration** - tools automatically discovered when referenced
 
 ---
 
@@ -172,21 +135,6 @@ goal_business_assistant = AgentGoal(
         included_tools=["GetCustomerOrders", "UpdateOrderStatus"]
     ),
 )
-```
-
-**Goal Team Benefits:**
-- ✅ **Runtime tool discovery** via `mcp_list_tools()` activity
-- ✅ **Automatic metadata** (tool names, descriptions, parameters, required fields)  
-- ✅ **Schema-driven validation** from MCP inputSchema
-- ✅ **Design agent personas** around discovered capabilities
-- ✅ **Dynamic tool loading** - no manual maintenance needed
-
-**Goal Manager Benefits:**
-- ✅ **Design freedom** - choose the best tool composition for each agent
-- ✅ **Runtime discovery** - tools automatically available when server is referenced
-- ✅ **Fine control** - include/exclude specific tools via included_tools
-- ✅ **Focus on UX** - agent personalities, conversation flows, user experience
-- ✅ **Schema validation** - parameter validation handled automatically
 
 ---
 
