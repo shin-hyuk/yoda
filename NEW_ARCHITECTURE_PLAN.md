@@ -245,7 +245,7 @@ graph LR
     
     subgraph GoalTeam [🎨 Goal Manager Team]
         DesignAgent[Design agent behavior<br/>goals/finance.py]
-        UseTools[tools=get_tools_by_category("finance")]
+        UseTools[tools = get_tools_by_category finance]
     end
     
     CreateTool --> AutoRegistry
