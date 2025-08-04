@@ -59,21 +59,18 @@ graph TB
     
     subgraph ExternalMCPEcosystem ["🌐 External MCP Server Ecosystem - NPM Based"]
         direction TB
-        StripeServer[Stripe MCP Server<br/>npx @stripe/mcp]
-        BankingServer[Banking MCP Server<br/>npx @utgl/banking_basic]
-        CustomServer[Custom Business MCP<br/>npx @company/custom_mcp]
-        NewServer[🆕 NEW MCP Server<br/>npx @team/new_service]
+        BusinessAPI[Business API Server<br/>npx @company/business-mcp]
+        AnalyticsService[Analytics Service<br/>npx @company/analytics-mcp]
+        IntegrationHub[Integration Hub<br/>npx @company/integration-mcp]
         
-        StripeServer -.->|Runtime Discovery| MCPSystem
-        BankingServer -.->|Runtime Discovery| MCPSystem
-        CustomServer -.->|Runtime Discovery| MCPSystem
-        NewServer -.->|🔥 Add to mcp_config.py| MCPSystem
+        BusinessAPI -.->|Runtime Discovery| MCPSystem
+        AnalyticsService -.->|Runtime Discovery| MCPSystem
+        IntegrationHub -.->|Runtime Discovery| MCPSystem
     end
     
-    MCPClientManager --> StripeServer
-    MCPClientManager --> BankingServer
-    MCPClientManager --> CustomServer
-    MCPClientManager --> NewServer
+    MCPClientManager --> BusinessAPI
+    MCPClientManager --> AnalyticsService
+    MCPClientManager --> IntegrationHub
     
     subgraph Infrastructure ["🏗️ Infrastructure Layer"]
         Postgres[(PostgreSQL<br/>Temporal Persistence)]
@@ -116,29 +113,29 @@ The current system in `shared/mcp_config.py` provides the optimal balance of:
 
 # 2. Develop tools with correct schema (automatically validated)
 {
-  "name": "CheckCreditScore",
-  "description": "Check user's credit score",
+  "name": "GetCustomerOrders",
+  "description": "Retrieve customer order history",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "ssn": {"type": "string", "description": "Social Security Number"},
-      "email": {"type": "string", "description": "User email address"}
+      "customer_id": {"type": "string", "description": "Customer identifier"},
+      "date_range": {"type": "string", "description": "Date range filter"}
     },
-    "required": ["ssn", "email"]
+    "required": ["customer_id"]
   }
 }
 
 # 3. Publish to NPM
-npm publish @utgl/banking_basic
+npm publish @company/business-mcp
 
 # 4. Notify goal team
-"Hey, we added @utgl/banking_basic with credit scoring and account validation tools"
+"Hey, we added @company/business-mcp with order management and customer tools"
 ```
 
 **Tool Developer Benefits:**
 - ✅ **Develop MCP server** following standard MCP protocol
-- ✅ **Upload to NPM** like `@utgl/banking_basic` 
-- ✅ **Notify goal team** - "Hey, we added `@utgl/banking_basic`"
+- ✅ **Upload to NPM** like `@company/business-mcp` 
+- ✅ **Notify goal team** - "Hey, we added `@company/business-mcp`"
 - ✅ **Zero YODA knowledge** - just follow MCP protocol standards
 - ✅ **Technology freedom** - any language that can create executables
 - ✅ **No Temporal concepts** - system handles workflow integration
@@ -153,40 +150,40 @@ npm publish @utgl/banking_basic
 **Process**: Discover MCP tools and design agents
 ```python
 # Step 1: Add MCP server definition to shared/mcp_config.py
-def get_banking_mcp_server_definition(included_tools: list[str]) -> MCPServerDefinition:
+def get_business_mcp_server_definition(included_tools: list[str]) -> MCPServerDefinition:
     return MCPServerDefinition(
-        name="banking-mcp",
+        name="business-mcp",
         command="npx",
-        args=["-y", "@utgl/banking_basic"],
+        args=["-y", "@company/business-mcp"],
         included_tools=included_tools,
     )
 
 # Step 2: Tools are automatically discovered at runtime via mcp_list_tools
 # Returns schema like:
 {
-  "CheckCreditScore": {
-    "name": "CheckCreditScore",
-    "description": "Check user's credit score", 
+  "GetCustomerOrders": {
+    "name": "GetCustomerOrders",
+    "description": "Retrieve customer order history", 
     "inputSchema": {
       "properties": {
-        "ssn": {"type": "string", "description": "Social Security Number"},
-        "email": {"type": "string", "description": "User email address"}
+        "customer_id": {"type": "string", "description": "Customer identifier"},
+        "date_range": {"type": "string", "description": "Date range filter"}
       },
-      "required": ["ssn", "email"]
+      "required": ["customer_id"]
     }
   }
 }
 
 # Step 3: Design goals using MCP server reference
-# goals/finance.py - Focus on agent behavior and UX  
-goal_finance_advisor = AgentGoal(
-    agent_name="Finance Assistant",
-    agent_friendly_description="Help with banking and credit services",
-    starter_prompt="Hi! I can help with your banking and credit needs...",
+# goals/business.py - Focus on agent behavior and UX  
+goal_business_assistant = AgentGoal(
+    agent_name="Business Assistant",
+    agent_friendly_description="Help with customer orders and business operations",
+    starter_prompt="Hi! I can help with your business operations...",
     
     # Reference MCP server (tools auto-discovered at runtime)
-    mcp_server_definition=get_banking_mcp_server_definition(
-        included_tools=["CheckCreditScore", "ValidateAccount"]
+    mcp_server_definition=get_business_mcp_server_definition(
+        included_tools=["GetCustomerOrders", "UpdateOrderStatus"]
     ),
 )
 ```
@@ -213,18 +210,18 @@ goal_finance_advisor = AgentGoal(
 graph LR
     subgraph ToolTeam [🛠️ Tool Development Team]
         BuildMCP[Build MCP Server<br/>any language/framework]
-        PublishNPM[Publish to NPM<br/>@company/service_mcp]
-        NotifyGoalTeam[Notify Goal Team<br/>"Added @company/service_mcp"]
+        PublishNPM[Publish to NPM<br/>@company/business-mcp]
+        NotifyGoalTeam[Notify Goal Team<br/>"Added @company/business-mcp"]
     end
     
     subgraph YodaSystem [🧠 YODA MCP System]
-        AddConfig[Add to mcp_config.py<br/>get_service_mcp_definition()]
+        AddConfig[Add to mcp_config.py<br/>get_business_mcp_definition()]
         RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
         DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools method]
     end
     
     subgraph AgentTeam [🎨 Agent Design Team]
-        DesignAgent[Design agent behavior<br/>goals/finance.py]
+        DesignAgent[Design agent behavior<br/>goals/business.py]
         ReferenceMCP[Reference MCP server<br/>mcp_server_definition]
     end
     
@@ -247,7 +244,7 @@ graph LR
 
 **Low-Deployment Workflow:**
 1. **Tool developers** build + publish MCP server to NPM (any tech stack)
-2. **Goal team** adds ~10 lines to `shared/mcp_config.py` (centralized registry)
+2. **Goal team** adds ~10 lines to `shared/mcp_config.py` (centralized registry)  
 3. **Goals reference MCP servers** - tools automatically discovered at runtime
 4. **Minimal coordination** between teams! **NPM handles distribution!**
 5. **Runtime discovery** means tools are available immediately when goal activates
