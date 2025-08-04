@@ -1,119 +1,15 @@
-# Enhanced Temporal AI Agent - Architecture Documentation
+# YODA Architecture Documentation
 
 ## 🎯 **Executive Summary**
 
-Document the current MCP server integration system and explore potential enhancements for streamlined tool development workflows while maintaining full Temporal orchestration capabilities.
+YODA (Yet Another Orchestration and Decision Agent) is a Temporal-powered AI agent system that enables seamless integration with external business tools through Model Context Protocol (MCP) servers. This document outlines YODA's architecture including MCP integration patterns, team collaboration workflows, JWT authentication, goal switching mechanisms, and persistent alert/schedule systems.
 
-**🔑 Key Insight:** The system already supports excellent MCP integration with NPM-based distribution and runtime tool discovery.
-
----
-
-## ⚙️ **Temporal Architecture**
-
-**Temporal Core Advantage**: Temporal provides durable, stateful orchestration where conversations and tool executions persist across interruptions, restarts, and failures.
-
-### **Complete Execution Flow**
-
-```mermaid
-graph TB
-    subgraph Frontend ["🌐 Frontend Layer"]
-        UserPrompt["User Prompt<br/>'Book flight to NYC'"]
-        ApiCall["POST /send-prompt<br/>{ prompt, session_context }"]
-    end
-    
-    subgraph FastAPI ["⚡ FastAPI Server"]
-        EndpointHandler["send_prompt()<br/>api/main.py"]
-        WorkflowStart["temporal_client.start_workflow()<br/>AgentGoalWorkflow.run"]
-    end
-    
-    subgraph TemporalServer ["🔄 Temporal Server (localhost:7233)"]
-        WorkflowQueue["Workflow Task Queue<br/>TEMPORAL_TASK_QUEUE"]
-        ActivityQueue["Activity Task Queue<br/>Tool executions"]
-        StateStore["Workflow State Storage<br/>PostgreSQL persistence"]
-    end
-    
-    subgraph TemporalWorker ["🧠 Temporal Worker (YODA Core)"]
-        WorkflowExec["AgentGoalWorkflow.run()<br/>workflows/agent_goal_workflow.py"]
-        LLMActivity["LLM Activities<br/>activities/tool_activities.py"]
-        MCPActivity["MCP Tool Activities<br/>dynamic execution"]
-        StateManagement["Conversation State<br/>self.messages, self.tool_results"]
-    end
-    
-    subgraph MCPServers ["🔧 External MCP Servers"]
-        AuthMCP["Auth MCP<br/>JWT validation"]
-        BusinessMCP["Business MCP<br/>Flight booking tools"]
-        AnalyticsMCP["Analytics MCP<br/>Data tools"]
-    end
-    
-    %% Flow connections
-    UserPrompt --> ApiCall
-    ApiCall --> EndpointHandler
-    EndpointHandler --> WorkflowStart
-    WorkflowStart --> WorkflowQueue
-    WorkflowQueue --> WorkflowExec
-    
-    %% Workflow execution
-    WorkflowExec --> StateManagement
-    WorkflowExec --> LLMActivity
-    WorkflowExec --> MCPActivity
-    
-    %% State persistence
-    StateManagement --> StateStore
-    StateStore --> StateManagement
-    
-    %% MCP tool calls
-    MCPActivity --> AuthMCP
-    MCPActivity --> BusinessMCP
-    MCPActivity --> AnalyticsMCP
-    
-    %% Activity scheduling
-    LLMActivity --> ActivityQueue
-    MCPActivity --> ActivityQueue
-    ActivityQueue --> LLMActivity
-    ActivityQueue --> MCPActivity
-    
-    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef api fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef temporal fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
-    classDef worker fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef mcp fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
-    class Frontend frontend
-    class FastAPI api
-    class TemporalServer temporal
-    class TemporalWorker worker
-    class MCPServers mcp
-```
-
-### **Temporal State Persistence Advantages**
-
-**1. Conversation Continuity**: All messages, tool results, and workflow state stored in PostgreSQL
-```python
-# workflows/agent_goal_workflow.py
-self.messages: List[Dict] = []  # Persisted across restarts
-self.tool_results: List[Dict] = []  # Survives worker crashes
-self.conversation_summary = ""  # Maintained during interruptions
-```
-
-**2. Durable Tool Execution**: MCP tool calls are Temporal activities with automatic retry
-```python
-# If worker crashes during MCP call, Temporal automatically:
-# - Resumes from last checkpoint
-# - Retries failed activities
-# - Maintains exact conversation state
-dynamic_result = await workflow.execute_activity(
-    tool_name, args,
-    retry_policy=RetryPolicy(initial_interval=timedelta(seconds=5))
-)
-```
-
-**3. Signal-Based Interaction**: User confirmations handled as workflow signals
-```python
-# User can confirm tools while workflow maintains state
-@workflow.signal
-def user_prompt(self, prompt: str):
-    self.prompt_queue.append(prompt)  # State persisted
-```
+**🔑 Key Architectural Strengths:**
+- **MCP Server Ecosystem Integration**: External business tools auto-discovered at runtime via NPM distribution
+- **Independent Team Development**: Tool developers and goal designers work in parallel with minimal coordination
+- **Session-Based JWT Authorization**: Portal session IDs exchange for scoped JWT tokens controlling tool access
+- **Persistent User State Management**: Alerts and schedules stored as JSON feeds linked to user JWT context
+- **Multi-Agent Orchestration**: Seamless goal switching with dual escape routes and agent selection hub
 
 ---
 
