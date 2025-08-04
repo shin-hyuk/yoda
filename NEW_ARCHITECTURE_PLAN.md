@@ -139,26 +139,27 @@ goal_business_assistant = AgentGoal(
 
 ---
 
-### **🔄 Team Workflow**
+## **Low-Friction Team Workflow**
 
-**Low-Deployment Workflow:**
-1. **Tool developers** build + publish MCP server to NPM (any tech stack)
-2. **Goal team** adds ~10 lines to `shared/mcp_config.py` (centralized registry)  
-3. **Goals reference MCP servers** - tools automatically discovered at runtime
-4. **Minimal coordination** between teams! **NPM handles distribution!**
-5. **Runtime discovery** means tools are available immediately when goal activates
+The MCP integration enables minimal coordination between teams through a simple 5-step process:
+
+1. **Tool Development Team**: Build + publish MCP server to NPM (any tech stack + MCP protocol)
+2. **Goal Team**: Add ~10 lines to `shared/mcp_config.py` (centralized registry)
+3. **System Integration**: Goals reference MCP servers - tools automatically discovered at runtime
+4. **Distribution**: NPM handles all distribution - no manual coordination needed!
+5. **Immediate Availability**: Tools become available instantly when goal activates
+
+**Key Benefits**: Teams work independently, MCP protocol ensures compatibility, runtime discovery eliminates manual registration.
 
 ---
 
-## 🔄 **Goal Switching Architecture - Dual Path System**
+## **Goal Switching Architecture**
 
-### **🎯 Perfect Understanding: Two Ways to Switch Goals**
-
-The system implements an elegant dual-path goal switching mechanism that gives users maximum flexibility:
+The system implements a dual-path goal switching mechanism that gives users maximum flexibility:
 
 ```mermaid
 graph TD
-    subgraph AnyGoal ["🎯 Any Active Goal (Travel, HR, Finance, etc.)"]
+    subgraph AnyGoal ["Any Active Goal (Travel, HR, Finance, etc.)"]
         direction TB
         UserInGoal[User in Middle of Goal<br/>e.g., Booking Flights]
         GoalTools[Goal-Specific Tools<br/>+ ListAgents tool<br/>auto-added in multi-goal mode]
@@ -166,10 +167,10 @@ graph TD
         UserInGoal --> GoalTools
     end
     
-    subgraph TwoEscapeRoutes ["⚡ Two Escape Routes from Any Goal"]
+    subgraph TwoEscapeRoutes ["Two Escape Routes from Any Goal"]
         direction TB
         
-        subgraph Route1 ["🏁 Route 1: Natural Completion"]
+        subgraph Route1 ["Route 1: Natural Completion"]
             direction TB
             CompleteAllSteps[Complete ALL Goal Steps<br/>e.g., Search → Book → Invoice]
             SystemTrigger[System Triggers<br/>'pick-new-goal']
@@ -179,7 +180,7 @@ graph TD
             SystemTrigger --> AutoReturn
         end
         
-        subgraph Route2 ["🚀 Route 2: Instant Switch"]
+        subgraph Route2 ["Route 2: Instant Switch"]
             direction TB
             UserCallsListAgents[User Calls ListAgents<br/>from any goal]
             InstantJump[Instant Jump to<br/>goal_choose_agent_type]
@@ -190,7 +191,7 @@ graph TD
         end
     end
     
-    subgraph AgentSelection ["🎪 Agent Selection Hub (goal_choose_agent_type)"]
+    subgraph AgentSelection ["Agent Selection Hub (goal_choose_agent_type)"]
         direction TB
         ListAgentsSilent[ListAgents Runs Silently<br/>Shows All Available Agents]
         ChangeGoalTool[ChangeGoal Tool Available<br/>Can Switch to ANY Goal]
@@ -207,309 +208,22 @@ graph TD
     ChangeGoalAvailable --> AgentSelection
     NewGoalSelected --> AnyGoal
     
-    %% Auto-addition of ListAgents
-    subgraph MultiGoalLogic ["🔧 Multi-Goal Mode Auto-Setup"]
-        direction TB
-        MultiGoalCheck{Multi-Goal Mode?}
-        AutoAddListAgents[Auto-Add ListAgents Tool<br/>to ALL Goals]
-        InstantSwitchEnabled[Instant Goal Switching<br/>Enabled Everywhere]
-        
-        MultiGoalCheck -->|Yes| AutoAddListAgents
-        AutoAddListAgents --> InstantSwitchEnabled
-        InstantSwitchEnabled -.-> GoalTools
-    end
-    
     classDef anyGoal fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef route1 fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef route2 fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef agentHub fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef autoLogic fill:#ffebee,stroke:#c62828,stroke-width:2px
     
     class AnyGoal anyGoal
     class Route1 route1
     class Route2 route2
     class AgentSelection agentHub
-    class MultiGoalLogic autoLogic
 ```
 
-### **🔑 Key Implementation Details**
-
-#### **1. Automatic ListAgents Addition (Multi-Goal Mode)**
-```python
-# goals/__init__.py - Lines 35-44
-if multi_goal_mode:
-    for goal in goal_list:
-        list_agents_found = False
-        for tool in goal.tools:
-            if tool.name == "ListAgents":
-                list_agents_found = True
-                continue
-        if list_agents_found is False:
-            goal.tools.append(tool_registry.list_agents_tool)  # ← Auto-added!
-```
-
-#### **2. Smart ListAgents Behavior**
-```python
-# workflows/agent_goal_workflow.py - Lines 389-393
-elif (
-    "ListAgents" in self.tool_results[-1].values()
-    and self.goal.id != "goal_choose_agent_type"  # ← Not already in agent selection
-):
-    self.change_goal("goal_choose_agent_type")    # ← Instant jump!
-```
-
-#### **3. ChangeGoal Tool Availability**
-```python
-# goals/agent_selection.py - Lines 31-34
-tools=[
-    tool_registry.list_agents_tool,    # Shows all options
-    tool_registry.change_goal_tool,    # ONLY available here!
-],
-```
-
-### **🎪 The Brilliant UX Design**
-
-| Scenario | User Action | System Response | Result |
-|----------|-------------|-----------------|---------|
-| **Mid-Flight Booking** | "Show me other agents" | Calls ListAgents → Auto-jump to agent selection | Can immediately switch to HR/Finance |
-| **Completed Travel Goal** | All steps done | System triggers "pick-new-goal" | Back to agent selection for next task |
-| **In Agent Selection** | "I want HR help" | ChangeGoal available directly | Instant switch to HR goal |
-
-### **⚡ Why This Architecture is Perfect**
-
-1. **🔓 No Dead Ends**: Users never get "stuck" in a goal - always 2 escape routes
-2. **🎯 Intent-Based**: ListAgents call = "I want to see other options" = auto-switch
-3. **🎪 Central Hub**: Agent selection is the universal switching point
-4. **🚀 Instant Gratification**: No need to complete current goal to switch
-5. **🔧 Hidden Complexity**: Users don't know about technical limitations
-6. **📱 Mobile-Like UX**: Like app switching - instant and intuitive
-
-### **🔄 Implementation Code Locations**
-
-| Component | File | Lines | Purpose |
-|-----------|------|-------|---------|
-| **Auto-Add ListAgents** | `goals/__init__.py` | 35-44 | Enable instant switching from any goal |
-| **ListAgents Jump Logic** | `workflows/agent_goal_workflow.py` | 389-393 | Detect ListAgents call → jump to agent selection |
-| **Pick-New-Goal Trigger** | `workflows/agent_goal_workflow.py` | 203-205 | Goal completion → return to agent selection |
-| **ChangeGoal Tool** | `goals/agent_selection.py` | 31-34 | Only available in agent selection goal |
-| **Goal Validation** | `workflows/agent_goal_workflow.py` | 307-315 | Validate goal ID exists before switching |
-
-This dual-path architecture creates seamless goal switching while maintaining clean separation of concerns and preventing the need for ChangeGoal tool to be added everywhere.
+Users never get "stuck" in a goal - they always have two escape routes. The agent selection hub serves as the universal switching point, providing instant gratification without needing to complete the current goal.
 
 ---
 
-## 🧠 **Smart Orchestrator Layer Enhancement - Multi-Goal Mode Stabilization**
-
-### **🎯 Current Problem: "Dumb" Agent Selection**
-
-**Current Flow** when user says "I want to book a flight" from Finance goal:
-1. ListAgents triggered → jump to `goal_choose_agent_type`
-2. LLM **DOES have** full conversation history (including "I want to book a flight")
-3. But goal description is "dumb" → always asks user to choose again
-4. User must re-state their intent: "I want the flight booking agent"
-
-### **🚀 Enhanced Solution: Smart Intent Detection**
-
-**New Flow** with Smart Orchestrator:
-1. ListAgents triggered → jump to `goal_choose_agent_type`
-2. LLM analyzes conversation history → detects "book a flight" intent
-3. Silently runs ListAgents → gets available agents
-4. **Auto-executes ChangeGoal** with flight/travel goal ID
-5. **Seamless switch** to flight booking - no re-asking needed!
-
-```mermaid
-graph TD
-    subgraph CurrentDumb ["❌ Current: Dumb Agent Selection"]
-        direction TB
-        UserFinance[User in Finance Goal:<br/>"I want to book a flight"]
-        JumpDumb[ListAgents → Jump to goal_choose_agent_type]
-        DumbPrompt[LLM: "Which agent would you like?"<br/>🤦‍♂️ Ignores conversation history]
-        UserRepeat[User: "Flight booking agent"<br/>😤 Must repeat intent]
-        
-        UserFinance --> JumpDumb
-        JumpDumb --> DumbPrompt
-        DumbPrompt --> UserRepeat
-    end
-    
-    subgraph SmartNew ["✅ Enhanced: Smart Intent Detection"]
-        direction TB
-        UserFinanceSmart[User in Finance Goal:<br/>"I want to book a flight"]
-        JumpSmart[ListAgents → Jump to goal_choose_agent_type]
-        SmartAnalysis[LLM Analyzes History:<br/>💡 "User wants flight booking"]
-        SilentList[Silently Run ListAgents<br/>🤖 Get available agents]
-        AutoChange[Auto-Execute ChangeGoal<br/>🎯 goal_id: "goal_travel_flights"]
-        SeamlessSwitch[🎉 Direct Flight Booking<br/>No re-asking needed!]
-        
-        UserFinanceSmart --> JumpSmart
-        JumpSmart --> SmartAnalysis
-        SmartAnalysis --> SilentList
-        SilentList --> AutoChange
-        AutoChange --> SeamlessSwitch
-    end
-    
-    classDef current fill:#ffebee,stroke:#c62828,stroke-width:2px
-    classDef smart fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    
-    class CurrentDumb current
-    class SmartNew smart
-```
-
-### **🔧 Implementation: Enhanced goal_choose_agent_type**
-
-#### **Current "Dumb" Description:**
-```python
-# goals/agent_selection.py - Lines 35-39
-description="The user wants to choose which type of agent they will interact with. "
-"Help the user select an agent by gathering args for the Changegoal tool, in order: "
-"1. ListAgents: List agents available to interact with. Do not ask for user confirmation for this tool. "
-"2. ChangeGoal: Change goal of agent "
-```
-
-#### **Enhanced "Smart" Description:**
-```python
-# goals/agent_selection.py - ENHANCED VERSION
-description="SMART ORCHESTRATOR: Analyze conversation history to detect user intent and auto-complete goal switching. "
-"CRITICAL: Check if user already expressed specific intent (e.g., 'book flight', 'check PTO', 'order food') in recent conversation history. "
-"If clear intent detected, skip asking and auto-execute goal switch. If ambiguous, ask for clarification. "
-
-"DECISION LOGIC: "
-"1. ListAgents: Always run silently first to get available agents "
-"2. ANALYZE CONVERSATION HISTORY: Look for intent keywords: "
-"   - 'flight'/'travel'/'trip' → goal_travel_flights "
-"   - 'PTO'/'vacation'/'time off' → goal_hr_pto "
-"   - 'account'/'money'/'balance' → goal_finance_* "
-"   - 'order'/'food'/'restaurant' → goal_food_* "
-"   - 'invoice'/'payment'/'billing' → goal_ecommerce_* "
-"3. AUTO-EXECUTE if clear match: Run ChangeGoal with detected goal_id "
-"4. ASK FOR CLARIFICATION only if: No clear intent detected OR multiple potential matches "
-
-"RESPONSE PATTERNS: "
-"- Clear intent: 'I detected you want to [action]. Switching to [agent_name] now...' → auto-execute ChangeGoal "
-"- Ambiguous: 'I see you mentioned [keywords]. Did you want the [agent1] or [agent2]?' → ask for clarification "
-"- No intent: 'Here are the available agents: [list]. Which would you like?' → standard flow "
-```
-
-### **🎨 Intent Detection Examples**
-
-| User Input | Detected Intent | Auto-Action | User Experience |
-|------------|-----------------|-------------|-----------------|
-| "I want to book a flight" | Flight booking | `ChangeGoal("goal_travel_flights")` | Direct switch to flight booking |
-| "Check my PTO balance" | HR/PTO | `ChangeGoal("goal_hr_pto")` | Direct switch to PTO management |
-| "Order some food" | Food ordering | `ChangeGoal("goal_food_order")` | Direct switch to food ordering |
-| "I need help with money and PTO" | Ambiguous | Ask: "Finance or HR agent?" | Clarification requested |
-| "What agents do you have?" | No specific intent | Show all agents | Standard selection flow |
-
-### **🔄 Enhanced Tool Integration**
-
-#### **Option A: Enhanced ChangeGoal Tool with Built-in ListAgents**
-```python
-# tools/change_goal.py - ENHANCED VERSION
-@tool(
-    name="ChangeGoal",
-    description="Smart goal switching with automatic agent discovery and intent detection",
-    arguments=[
-        ToolArgument(name="goalID", type="string", description="Target goal ID"),
-        ToolArgument(name="auto_detect", type="boolean", description="Auto-detect from conversation history", default=True),
-        ToolArgument(name="user_intent", type="string", description="Detected user intent keywords", optional=True)
-    ]
-)
-def change_goal(args: dict) -> dict:
-    goal_id = args.get("goalID")
-    auto_detect = args.get("auto_detect", True)
-    user_intent = args.get("user_intent", "")
-    
-    # If no goal_id provided and auto_detect enabled, try to infer
-    if not goal_id and auto_detect:
-        goal_id = detect_intent_from_keywords(user_intent)
-    
-    # Default fallback
-    if not goal_id:
-        goal_id = "goal_choose_agent_type"
-    
-    return {
-        "new_goal": goal_id,
-        "intent_detected": user_intent if goal_id != "goal_choose_agent_type" else None,
-        "auto_switched": bool(goal_id != "goal_choose_agent_type" and auto_detect)
-    }
-
-def detect_intent_from_keywords(intent_text: str) -> str:
-    """Map user intent keywords to goal IDs"""
-    intent_lower = intent_text.lower()
-    
-    if any(word in intent_lower for word in ["flight", "travel", "trip", "vacation"]):
-        return "goal_travel_flights"
-    elif any(word in intent_lower for word in ["pto", "time off", "vacation days"]):
-        return "goal_hr_pto"
-    elif any(word in intent_lower for word in ["account", "money", "balance", "finance"]):
-        return "goal_finance_advisor"
-    elif any(word in intent_lower for word in ["food", "order", "restaurant", "meal"]):
-        return "goal_food_order"
-    elif any(word in intent_lower for word in ["invoice", "payment", "billing"]):
-        return "goal_ecommerce_invoice"
-    
-    return "goal_choose_agent_type"  # Fallback to agent selection
-```
-
-#### **Option B: Keep Separate Tools but Make goal_choose_agent_type Super Smart**
-```python
-# goals/agent_selection.py - Enhanced with conversation analysis
-goal_choose_agent_type = AgentGoal(
-    id="goal_choose_agent_type",
-    tools=[
-        tool_registry.list_agents_tool,
-        tool_registry.change_goal_tool,
-    ],
-    description="""SMART AGENT ORCHESTRATOR: You are an intelligent agent dispatcher that analyzes conversation history to auto-complete goal switches.
-
-CRITICAL INSTRUCTIONS:
-1. ALWAYS run ListAgents first (silently, no user confirmation needed)
-2. ANALYZE conversation history for user intent BEFORE asking questions
-3. AUTO-EXECUTE goal switches when intent is clear
-4. ONLY ask for clarification when intent is ambiguous
-
-INTENT DETECTION PATTERNS:
-- Flight/Travel: "book flight", "travel", "trip" → goal_travel_flights
-- HR/PTO: "PTO", "time off", "vacation" → goal_hr_pto  
-- Finance: "account", "money", "balance" → goal_finance_advisor
-- Food: "order food", "restaurant", "meal" → goal_food_order
-- Ecommerce: "invoice", "order status", "billing" → goal_ecommerce_*
-
-RESPONSE LOGIC:
-- Clear intent detected: "I see you want to [action]. Switching to [agent] now..." → ChangeGoal immediately
-- Ambiguous intent: "I noticed you mentioned [keywords]. Are you looking for [option1] or [option2]?"
-- No specific intent: Standard agent selection flow
-
-CONVERSATION HISTORY ACCESS: Use the full conversation history to understand what the user was trying to do when they triggered the agent switch.""",
-    
-    starter_prompt="I'm your intelligent agent dispatcher. I can automatically switch you to the right agent based on what you've been discussing, or help you choose if you're exploring options.",
-)
-```
-
-### **🎯 Implementation Benefits**
-
-#### **🚀 User Experience Transformation**
-- **Seamless Switching**: "I want to book a flight" → directly in flight booking (0 extra steps)
-- **Context Awareness**: System remembers what user was trying to do
-- **Reduced Friction**: No need to re-state intent after goal switches
-- **Natural Conversation**: Feels like talking to one smart agent, not multiple dumb ones
-
-#### **🧠 Intelligence Levels**
-1. **Basic**: Current system - always ask user to choose
-2. **Smart**: Detect common patterns - auto-switch for clear intents  
-3. **Advanced**: ML-based intent detection - learn from user patterns
-4. **Genius**: Predictive switching - suggest relevant agents before user asks
-
-#### **🔧 Technical Implementation**
-- **Minimal Code Changes**: Only enhance goal_choose_agent_type description
-- **Backward Compatible**: Falls back to current behavior if no intent detected
-- **Conversation History**: Already available to LLM - just need smarter prompts
-- **Goal Registry**: Already has all agent mappings - just need intent keywords
-
-This enhancement transforms the multi-goal mode from a "dumb agent picker" into a "smart orchestrator" that understands user intent and minimizes friction.
-
----
-
-## 🎯 **Multi-Goal Mode as Default Architecture**
+## **Multi-Goal Mode as Default Architecture**
 
 ### **🔄 Current Problem: Opt-In Multi-Goal Mode**
 
