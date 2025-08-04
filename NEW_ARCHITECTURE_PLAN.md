@@ -135,6 +135,7 @@ goal_business_assistant = AgentGoal(
         included_tools=["GetCustomerOrders", "UpdateOrderStatus"]
     ),
 )
+```
 
 ---
 
@@ -142,21 +143,21 @@ goal_business_assistant = AgentGoal(
 
 ```mermaid
 graph LR
-    subgraph ToolTeam [🛠️ Tool Development Team]
-        BuildMCP[Build MCP Server<br/>any language/framework]
-        PublishNPM[Publish to NPM<br/>@company/business-mcp]
-        NotifyGoalTeam[Notify Goal Team<br/>Added @company/business-mcp]
+    subgraph ToolTeam ["🛠️ Tool Development Team"]
+        BuildMCP["Build MCP Server<br/>any language/framework"]
+        PublishNPM["Publish to NPM<br/>@company/business-mcp"]
+        NotifyGoalTeam["Notify Goal Team<br/>Added @company/business-mcp"]
     end
     
-    subgraph YodaSystem [🧠 YODA MCP System]
-        AddConfig[Add to mcp_config.py<br/>get_business_mcp_definition()]
-        RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
-        DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools method]
+    subgraph YodaSystem ["🧠 YODA MCP System"]
+        AddConfig["Add to mcp_config.py<br/>get_business_mcp_definition()"]
+        RuntimeDiscovery["Runtime Tool Discovery<br/>mcp_list_tools activity"]
+        DynamicLoading["Dynamic Tool Loading<br/>load_mcp_tools method"]
     end
     
-    subgraph AgentTeam [🎨 Agent Design Team]
-        DesignAgent[Design agent behavior<br/>goals/business.py]
-        ReferenceMCP[Reference MCP server<br/>mcp_server_definition]
+    subgraph AgentTeam ["🎨 Agent Design Team"]
+        DesignAgent["Design agent behavior<br/>goals/business.py"]
+        ReferenceMCP["Reference MCP server<br/>mcp_server_definition"]
     end
     
     BuildMCP --> PublishNPM
@@ -175,6 +176,7 @@ graph LR
     class AgentTeam agentTeam
     class YodaSystem system
 ```
+
 
 **Low-Deployment Workflow:**
 1. **Tool developers** build + publish MCP server to NPM (any tech stack)
