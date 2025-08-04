@@ -142,21 +142,21 @@ goal_business_assistant = AgentGoal(
 
 ```mermaid
 graph LR
-    subgraph ToolTeam ["🛠️ <b>Tool Development Team</b>"]
-        BuildMCP["<b>Build MCP Server</b><br/><i>any language/framework</i>"]
-        PublishNPM["<b>Publish to NPM</b><br/><i>@company/business-mcp</i>"]
-        NotifyGoalTeam["<b>Notify Goal Team</b><br/><i>Added @company/business-mcp</i>"]
+    subgraph ToolTeam [🛠️ Tool Development Team]
+        BuildMCP[Build MCP Server<br/>any language/framework]
+        PublishNPM[Publish to NPM<br/>@company/business-mcp]
+        NotifyGoalTeam[Notify Goal Team<br/>Added @company/business-mcp]
     end
     
-    subgraph YodaSystem ["🧠 <b>YODA MCP System</b>"]
-        AddConfig["<b>Add to mcp_config.py</b><br/><i>get_business_mcp_definition()</i>"]
-        RuntimeDiscovery["<b>Runtime Tool Discovery</b><br/><i>mcp_list_tools activity</i>"]
-        DynamicLoading["<b>Dynamic Tool Loading</b><br/><i>load_mcp_tools method</i>"]
+    subgraph YodaSystem [🧠 YODA MCP System]
+        AddConfig[Add to mcp_config.py<br/>get_business_mcp_definition()]
+        RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
+        DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools method]
     end
     
-    subgraph AgentTeam ["🎨 <b>Agent Design Team</b>"]
-        DesignAgent["<b>Design agent behavior</b><br/><i>goals/business.py</i>"]
-        ReferenceMCP["<b>Reference MCP server</b><br/><i>mcp_server_definition</i>"]
+    subgraph AgentTeam [🎨 Agent Design Team]
+        DesignAgent[Design agent behavior<br/>goals/business.py]
+        ReferenceMCP[Reference MCP server<br/>mcp_server_definition]
     end
     
     BuildMCP --> PublishNPM
