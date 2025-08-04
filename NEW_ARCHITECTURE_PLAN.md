@@ -8,9 +8,9 @@ Document the current MCP server integration system and explore potential enhance
 
 ---
 
-## ⚙️ **Temporal Workflow Mechanics**
+## ⚙️ **Temporal Architecture**
 
-**YODA's Core Advantage**: Temporal provides durable, stateful orchestration where conversations and tool executions persist across interruptions, restarts, and failures.
+**Temporal Core Advantage**: Temporal provides durable, stateful orchestration where conversations and tool executions persist across interruptions, restarts, and failures.
 
 ### **Complete Execution Flow**
 
@@ -114,8 +114,6 @@ dynamic_result = await workflow.execute_activity(
 def user_prompt(self, prompt: str):
     self.prompt_queue.append(prompt)  # State persisted
 ```
-
-**Key Difference from Stateless Systems**: Traditional chatbots lose context on restart. YODA maintains exact conversation state, tool execution progress, and user interaction history through any system interruption.
 
 ---
 
