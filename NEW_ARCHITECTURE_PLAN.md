@@ -1084,3 +1084,146 @@ CONVERSATION HISTORY ACCESS: Use the full conversation history to understand wha
 - **Goal Registry**: Already has all agent mappings - just need intent keywords
 
 This enhancement transforms the multi-goal mode from a "dumb agent picker" into a "smart orchestrator" that understands user intent and minimizes friction.
+
+---
+
+## 🎯 **Multi-Goal Mode as Default Architecture**
+
+### **🔄 Current Problem: Opt-In Multi-Goal Mode**
+
+**Current State:**
+- Multi-goal mode is **opt-in** via environment variable `AGENT_GOAL="goal_choose_agent_type"`
+- **Default behavior** is single-agent mode (users get locked into one agent)
+- **Most users miss** the flexible goal-switching capabilities
+- **Complex setup** required to enable the best UX
+
+```python
+# goals/__init__.py - Current opt-in logic
+first_goal_value = os.getenv("AGENT_GOAL")
+if first_goal_value is None:
+    multi_goal_mode = False  # ← Default: Single agent (limited)
+elif first_goal_value.lower() == "goal_choose_agent_type":
+    multi_goal_mode = True   # ← Opt-in: Multi-agent (flexible)
+else:
+    multi_goal_mode = False
+```
+
+### **✅ Enhanced Solution: Multi-Goal Mode by Default**
+
+**New Architecture Decision:** Make the superior dual-path goal switching the **default user experience**.
+
+```python
+# goals/__init__.py - ENHANCED: Multi-goal by default
+first_goal_value = os.getenv("AGENT_GOAL", "goal_choose_agent_type")  # ← Default changed!
+
+# Multi-goal mode is now the default behavior
+multi_goal_mode = True
+
+# Optional: Allow opt-out for specialized deployments
+force_single_mode = os.getenv("FORCE_SINGLE_AGENT_MODE", "false").lower() == "true"
+if force_single_mode:
+    multi_goal_mode = False
+    first_goal_value = os.getenv("SINGLE_AGENT_GOAL", "goal_travel_flights")
+```
+
+### **🚀 Architecture Benefits of Default Multi-Goal Mode**
+
+#### **👥 Universal User Experience**
+```mermaid
+graph LR
+    subgraph CurrentLimited ["❌ Current: Limited by Default"]
+        direction TB
+        NewUser1[New User Starts]
+        SingleAgent1[Locked to One Agent<br/>e.g., Only Flight Booking]
+        Frustrated1[😤 "I want to check PTO too"<br/>Can't switch easily]
+        
+        NewUser1 --> SingleAgent1
+        SingleAgent1 --> Frustrated1
+    end
+    
+    subgraph EnhancedFlexible ["✅ Enhanced: Flexible by Default"]
+        direction TB
+        NewUser2[New User Starts]
+        AgentSelection[Intelligent Agent Selection<br/>goal_choose_agent_type]
+        MultipleOptions[🎉 Can Switch Anytime<br/>Flight → HR → Finance → Food]
+        Delighted[😊 "This system understands me"<br/>Seamless experience]
+        
+        NewUser2 --> AgentSelection
+        AgentSelection --> MultipleOptions
+        MultipleOptions --> Delighted
+    end
+    
+    classDef limited fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef flexible fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    
+    class CurrentLimited limited
+    class EnhancedFlexible flexible
+```
+
+#### **🔧 Technical Implementation**
+
+**Changes Required:**
+1. **Default Environment Variable**: `AGENT_GOAL="goal_choose_agent_type"`
+2. **Auto-Add ListAgents**: Applied to **all goals by default**
+3. **Conversation History**: Already works across goal switches
+4. **Smart Intent Detection**: Enhanced `goal_choose_agent_type` prompts
+
+#### **📊 User Experience Comparison**
+
+| Scenario | Current (Single Mode Default) | Enhanced (Multi Mode Default) |
+|----------|-------------------------------|-------------------------------|
+| **New User** | Locked to one agent type | Starts with agent selection hub |
+| **Task Switching** | Must restart or manually configure | Natural "I want to..." → auto-switch |
+| **Discovery** | Limited to current agent's scope | Sees all available capabilities |
+| **Setup Complexity** | Requires env var knowledge | Works out of the box |
+| **Adoption** | Power users only | All users get best experience |
+
+#### **🎪 Default User Journey**
+
+**Enhanced Default Flow:**
+1. **User starts system** → Automatically in `goal_choose_agent_type`
+2. **"I want to book a flight"** → Smart agent selection → Direct to travel agent
+3. **Mid-flight booking:** **"Actually, let me check my PTO first"** → ListAgents → Auto-switch to HR
+4. **After PTO check:** **"Now back to flights"** → Smart history analysis → Back to travel
+5. **Seamless experience** across all business domains
+
+#### **⚙️ Configuration Options**
+
+```python
+# Environment Variables - New Defaults
+AGENT_GOAL="goal_choose_agent_type"          # ← Multi-goal by default
+FORCE_SINGLE_AGENT_MODE="false"             # ← Opt-out for specialized use
+SINGLE_AGENT_GOAL="goal_travel_flights"     # ← Fallback if force single
+SMART_INTENT_DETECTION="true"               # ← Enhanced agent selection
+```
+
+#### **🔄 Migration Path**
+
+**Existing Deployments:**
+- **Backward Compatible**: Current single-mode setups continue working
+- **Gradual Migration**: Teams can test multi-mode without breaking changes
+- **Override Available**: `FORCE_SINGLE_AGENT_MODE=true` for specialized deployments
+
+**New Deployments:**
+- **Multi-goal by default**: Superior UX out of the box
+- **No configuration needed**: Works optimally without setup
+- **Discovery-friendly**: Users naturally find all available agents
+
+### **🎯 Strategic Impact**
+
+#### **🚀 Developer Experience**
+- **Simplified Onboarding**: New developers see full system capabilities immediately
+- **Reduced Support**: Users don't get stuck in single-agent limitations
+- **Better Testing**: Default behavior exercises all goal-switching logic
+
+#### **👥 User Adoption**
+- **Natural Discovery**: Users find agents they didn't know existed
+- **Reduced Friction**: No manual configuration to unlock features
+- **Intuitive Workflow**: "I want to..." → system handles routing
+
+#### **📈 Business Value**
+- **Increased Engagement**: Users explore more business capabilities
+- **Reduced Training**: Intuitive multi-agent experience
+- **Future-Proof**: New agents automatically available to all users
+
+This architectural change transforms the system from "single-purpose tool with optional flexibility" to "intelligent multi-agent platform by default".
