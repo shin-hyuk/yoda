@@ -32,6 +32,8 @@ graph TB
         MCPClientManager --> RuntimeDiscovery["<b>Runtime Tool Discovery</b><br/><i>mcp_list_tools activity</i>"]
     end
     
+    YodaBrain --> ExternalMCP
+    
     subgraph ExternalMCP ["🌐 <b>External MCP Ecosystem</b>"]
         direction TB
         BusinessAPI["<b>Business API Server</b><br/><i>npx @company/business-mcp</i>"]
@@ -39,13 +41,15 @@ graph TB
         IntegrationHub["<b>Integration Hub</b><br/><i>npx @company/integration-mcp</i>"]
     end
     
+    ExternalMCP --> Infrastructure
+    
     subgraph Infrastructure ["🏗️ <b>Infrastructure Layer</b>"]
         direction TB
         Postgres[("<b>PostgreSQL Database</b><br/><i>Temporal Persistence</i>")]
         NPMRegistry[("<b>NPM Registry</b><br/><i>MCP Package Distribution</i>")]
     end
     
-    %% Connections
+    %% Specific Connections
     MCPClientManager --> BusinessAPI
     MCPClientManager --> AnalyticsService  
     MCPClientManager --> IntegrationHub
@@ -53,7 +57,9 @@ graph TB
     AnalyticsService -.->|Discovery| RuntimeDiscovery
     IntegrationHub -.->|Discovery| RuntimeDiscovery
     Temporal --> Postgres
-    ExternalMCP --> NPMRegistry
+    BusinessAPI --> NPMRegistry
+    AnalyticsService --> NPMRegistry
+    IntegrationHub --> NPMRegistry
     
     classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
     classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
