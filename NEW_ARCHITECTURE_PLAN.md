@@ -144,36 +144,40 @@ goal_business_assistant = AgentGoal(
 ```mermaid
 graph LR
     subgraph ToolTeam ["🛠️ Tool Development Team"]
-        BuildMCP["Build MCP Server<br/>any language/framework"]
-        PublishNPM["Publish to NPM<br/>@company/business-mcp"]
+        BuildMCP["Build MCP Server Process<br/>any language/framework + MCP protocol + NPM distribution"]
+        PublishNPM["Publish to NPM<br/>npx @company/business-mcp"]
         NotifyGoalTeam["Notify Goal Team<br/>Added @company/business-mcp"]
     end
     
-    subgraph YodaSystem ["🧠 YODA MCP System"]
+    subgraph YodaSystem ["🧠 YODA Temporal System"]
         AddConfig["Add to mcp_config.py<br/>get_business_mcp_definition()"]
-        RuntimeDiscovery["Runtime Tool Discovery<br/>mcp_list_tools activity"]
-        DynamicLoading["Dynamic Tool Loading<br/>load_mcp_tools method"]
+        MCPClientManager["MCP Client Manager<br/>stdio connections + response normalization"]
+        ResponseNormalization["_normalize_result()<br/>MCP protocol → Temporal format"]
+        DynamicActivities["Dynamic Temporal Activities<br/>@activity.defn(dynamic=True)"]
     end
     
-    subgraph AgentTeam ["🎨 Agent Design Team"]
-        DesignAgent["Design agent behavior<br/>goals/business.py"]
+    subgraph GoalTeam ["🎨 Goal Team"]
+        DesignGoal["Design goal behavior<br/>goals/business.py"]
         ReferenceMCP["Reference MCP server<br/>mcp_server_definition"]
+        MCPExecution["MCP tools auto-registered<br/>as Temporal activities"]
     end
     
     BuildMCP --> PublishNPM
     PublishNPM --> NotifyGoalTeam
     NotifyGoalTeam --> AddConfig
     AddConfig --> ReferenceMCP
-    ReferenceMCP --> RuntimeDiscovery
-    RuntimeDiscovery --> DynamicLoading
-    DynamicLoading --> DesignAgent
+    ReferenceMCP --> MCPClientManager
+    MCPClientManager --> ResponseNormalization
+    ResponseNormalization --> DynamicActivities
+    DynamicActivities --> MCPExecution
+    MCPExecution --> DesignGoal
     
     classDef toolTeam fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef agentTeam fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef goalTeam fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef system fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     
     class ToolTeam toolTeam
-    class AgentTeam agentTeam
+    class GoalTeam goalTeam
     class YodaSystem system
 ```
 
