@@ -42,19 +42,8 @@ graph TB
         AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
         AgentWorkflow --> MCPClientManager[MCP Client Manager<br/>shared/mcp_client_manager.py]
         
-        subgraph MCPSystem ["✅ Current MCP Server System"]
-            direction TB
-            MCPConfig[MCP Registry<br/>shared/mcp_config.py]
-            RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
-            DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools workflow method]
-            SchemaValidation[Auto Parameter Validation<br/>From MCP inputSchema]
-            
-            MCPConfig --> RuntimeDiscovery
-            RuntimeDiscovery --> DynamicLoading
-            DynamicLoading --> SchemaValidation
-        end
-        
-        MCPClientManager --> MCPSystem
+        RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
+        MCPClientManager --> RuntimeDiscovery
     end
     
     subgraph ExternalMCPEcosystem ["🌐 External MCP Server Ecosystem - NPM Based"]
@@ -63,9 +52,9 @@ graph TB
         AnalyticsService[Analytics Service<br/>npx @company/analytics-mcp]
         IntegrationHub[Integration Hub<br/>npx @company/integration-mcp]
         
-        BusinessAPI -.->|Runtime Discovery| MCPSystem
-        AnalyticsService -.->|Runtime Discovery| MCPSystem
-        IntegrationHub -.->|Runtime Discovery| MCPSystem
+        BusinessAPI -.->|Runtime Discovery| RuntimeDiscovery
+        AnalyticsService -.->|Runtime Discovery| RuntimeDiscovery
+        IntegrationHub -.->|Runtime Discovery| RuntimeDiscovery
     end
     
     MCPClientManager --> BusinessAPI
@@ -75,18 +64,15 @@ graph TB
     subgraph Infrastructure ["🏗️ Infrastructure Layer"]
         Postgres[(PostgreSQL<br/>Temporal Persistence)]
         NPMRegistry[(NPM Registry<br/>MCP Package Distribution)]
-        Docker[Docker Compose<br/>Local Development]
         Temporal --> Postgres
         ExternalMCPEcosystem --> NPMRegistry
     end
     
     classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
-    classDef mcp fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
     classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     
     class YodaBrain brain
-    class MCPSystem mcp
     class ExternalMCPEcosystem external
     class Infrastructure infra
 ```
