@@ -72,24 +72,24 @@ graph TB
     class Infrastructure infra
 ```
 
-**❌ Current MCP Server Registration Reality:**
+**✅ Current MCP Server Integration Reality:**
 
-To add a new MCP server/tool, developers must:
+To add a new MCP server/tool, developers can:
 
-1. **Create MCPServerDefinition** (`shared/mcp_config.py`) - 15+ lines per server
-2. **Wire to goals manually** (`goals/*.py` - import and reference mcp_server_definition)
-3. **Deploy code changes** (restart entire system)
-4. **No runtime discovery** (tools only available after deployment)
-5. **Manual endpoint management** (no centralized registry)
+1. **Add MCPServerDefinition** (`shared/mcp_config.py`) - ~10 lines per server in centralized registry
+2. **Reference in goals** (`goals/*.py` - import and reference mcp_server_definition)
+3. **NPM package deployment** (no system restart required)
+4. **Runtime tool discovery** (tools automatically discovered via mcp_list_tools)
+5. **Centralized registry** (shared/mcp_config.py)
 
-**Current Pain Points:**
-- ❌ **Code deployment required** for every new MCP server/tool
-- ❌ **Manual server definitions** across multiple files
-- ❌ **No dynamic discovery** - tools only available after restart
-- ❌ **Tight coupling** - MCP configs embedded in code
-- ❌ **Developer friction** - need to understand Temporal + Python for simple tool additions
+**Current Capabilities:**
+- ✅ **NPM package support** - servers can be published and consumed via NPM
+- ✅ **Centralized definitions** - all MCP servers defined in shared/mcp_config.py
+- ✅ **Dynamic discovery** - tools automatically discovered at runtime
+- ✅ **Technology freedom** - any language that can create NPM executables
+- ✅ **Zero Temporal knowledge** - tool developers just follow MCP protocol
 
-### **New Architecture - MCP Auto-Discovery System**
+### **Current Architecture - MCP Server Integration System**
 
 ```mermaid
 graph TB
@@ -98,77 +98,78 @@ graph TB
     API --> Temporal[Temporal Server<br/>localhost:7233]
     Temporal --> Worker[Temporal Worker]
     
-    subgraph YodaBrainEnhanced ["🧠 YODA - Enhanced Orchestrator Brain"]
+    subgraph YodaBrain ["🧠 YODA - The Orchestrator Brain"]
         direction TB
         Worker --> AgentWorkflow[AgentGoalWorkflow<br/>workflows/agent_goal_workflow.py]
         AgentWorkflow --> LLMActivity[LLM Activities<br/>activities/tool_activities.py]
-        AgentWorkflow --> MCPAutoDiscovery[MCP Auto-Discovery Manager<br/>shared/mcp_auto_discovery.py]
+        AgentWorkflow --> MCPClientManager[MCP Client Manager<br/>shared/mcp_client_manager.py]
         
-        subgraph AutoMCPSystem ["✅ MCP Auto-Discovery System"]
+        subgraph MCPSystem ["✅ Current MCP Server System"]
             direction TB
-            EndpointRegistry[MCP Endpoint Registry<br/>config/mcp_endpoints.json]
-            AutoDiscoverer[Runtime Tool Discovery<br/>Auto-scan MCP servers]
-            ToolCache[Dynamic Tool Cache<br/>In-memory tool definitions]
-            AutoValidator[Auto Parameter Validation<br/>From MCP schema]
+            MCPConfig[MCP Registry<br/>shared/mcp_config.py]
+            RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
+            DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools workflow method]
+            SchemaValidation[Auto Parameter Validation<br/>From MCP inputSchema]
             
-            EndpointRegistry --> AutoDiscoverer
-            AutoDiscoverer --> ToolCache
-            ToolCache --> AutoValidator
+            MCPConfig --> RuntimeDiscovery
+            RuntimeDiscovery --> DynamicLoading
+            DynamicLoading --> SchemaValidation
         end
         
-        MCPAutoDiscovery --> AutoMCPSystem
+        MCPClientManager --> MCPSystem
     end
     
-    subgraph ExternalMCPEcosystem ["🌐 External MCP Server Ecosystem - Zero Deployment"]
+    subgraph ExternalMCPEcosystem ["🌐 External MCP Server Ecosystem - NPM Based"]
         direction TB
-        StripeServer[Stripe MCP Server<br/>https://stripe-mcp.company.com]
-        FoodServer[Food Ordering MCP<br/>https://food-mcp.company.com]
-        CustomServer[Custom Business MCP<br/>https://business-api.company.com]
-        NewServer[🆕 NEW MCP Server<br/>https://new-service.company.com]
+        StripeServer[Stripe MCP Server<br/>npx @stripe/mcp]
+        BankingServer[Banking MCP Server<br/>npx @utgl/banking_basic]
+        CustomServer[Custom Business MCP<br/>npx @company/custom_mcp]
+        NewServer[🆕 NEW MCP Server<br/>npx @team/new_service]
         
-        StripeServer -.->|Auto-Discovery| AutoMCPSystem
-        FoodServer -.->|Auto-Discovery| AutoMCPSystem
-        CustomServer -.->|Auto-Discovery| AutoMCPSystem
-        NewServer -.->|🔥 ZERO Code Changes| AutoMCPSystem
+        StripeServer -.->|Runtime Discovery| MCPSystem
+        BankingServer -.->|Runtime Discovery| MCPSystem
+        CustomServer -.->|Runtime Discovery| MCPSystem
+        NewServer -.->|🔥 Add to mcp_config.py| MCPSystem
     end
     
-    MCPAutoDiscovery --> StripeServer
-    MCPAutoDiscovery --> FoodServer
-    MCPAutoDiscovery --> CustomServer
-    MCPAutoDiscovery --> NewServer
+    MCPClientManager --> StripeServer
+    MCPClientManager --> BankingServer
+    MCPClientManager --> CustomServer
+    MCPClientManager --> NewServer
     
     subgraph Infrastructure ["🏗️ Infrastructure Layer"]
         Postgres[(PostgreSQL<br/>Temporal Persistence)]
-        ConfigStore[(Configuration Store<br/>MCP Endpoint Registry)]
+        NPMRegistry[(NPM Registry<br/>MCP Package Distribution)]
         Docker[Docker Compose<br/>Local Development]
         Temporal --> Postgres
+        ExternalMCPEcosystem --> NPMRegistry
     end
     
     classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
-    classDef auto fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef mcp fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
     classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     
-    class YodaBrainEnhanced brain
-    class AutoMCPSystem auto
+    class YodaBrain brain
+    class MCPSystem mcp
     class ExternalMCPEcosystem external
     class Infrastructure infra
 ```
 
-## 👥 **Perfect Team Separation**
+## 👥 **Current Team Separation Pattern**
 
-**✅ Kevin's Vision Achieved:** *"adding a tool should be simply adding a mcp server endpoint, ideally without a new deployment"*
+**✅ Kevin's Vision Already Working:** *"adding a tool should be simply adding a mcp server endpoint, ideally without a new deployment"*
 
-### **🛠️ Tool Development Team** (Zero Deployment Focus)
+### **🛠️ Tool Development Team** (Current Process)
 
 **Responsibility**: Create and publish MCP servers as NPM packages
 
-**Process**: Build MCP server + Publish to NPM + Notify goal team
+**Current Process**: Build MCP server + Publish to NPM + Notify goal team
 ```bash
-# 1. Build MCP Server following Temporal's expected JSON Schema format
+# 1. Build MCP Server following MCP protocol standard
 # Node.js, Python, Go, etc. - any language that can create NPM executable
 
-# 2. Develop tools with correct schema
+# 2. Develop tools with correct schema (automatically validated)
 {
   "name": "CheckCreditScore",
   "description": "Check user's credit score",
@@ -189,14 +190,14 @@ npm publish @utgl/banking_basic
 "Hey, we added @utgl/banking_basic with credit scoring and account validation tools"
 ```
 
-**Tool Developer Benefits:**
-- ✅ **Develop MCP server** following Temporal's expected JSON Schema format
+**Current Tool Developer Benefits:**
+- ✅ **Develop MCP server** following standard MCP protocol
 - ✅ **Upload to NPM** like `@utgl/banking_basic` 
 - ✅ **Notify goal team** - "Hey, we added `@utgl/banking_basic`"
 - ✅ **Zero YODA knowledge** - just follow MCP protocol standards
 - ✅ **Technology freedom** - any language that can create executables
-- ✅ **No Temporal concepts** - decorators handle workflow integration
-- ✅ **Auto-integration** - tools automatically available to appropriate agents
+- ✅ **No Temporal concepts** - system handles workflow integration
+- ✅ **Runtime integration** - tools automatically discovered when referenced
 
 ---
 
@@ -204,12 +205,19 @@ npm publish @utgl/banking_basic
 
 **Responsibility**: Agent personas, conversation flows, user experience
 
-**Process**: Auto-discover MCP tools and design agents
+**Current Process**: Discover MCP tools and design agents
 ```python
-# Step 1: Goal team discovers tools from new MCP server
-mcp_tools = await mcp_list_tools(get_banking_mcp_server_definition())
+# Step 1: Add MCP server definition to shared/mcp_config.py
+def get_banking_mcp_server_definition(included_tools: list[str]) -> MCPServerDefinition:
+    return MCPServerDefinition(
+        name="banking-mcp",
+        command="npx",
+        args=["-y", "@utgl/banking_basic"],
+        included_tools=included_tools,
+    )
 
-# Returns:
+# Step 2: Tools are automatically discovered at runtime via mcp_list_tools
+# Returns schema like:
 {
   "CheckCreditScore": {
     "name": "CheckCreditScore",
@@ -221,68 +229,67 @@ mcp_tools = await mcp_list_tools(get_banking_mcp_server_definition())
       },
       "required": ["ssn", "email"]
     }
-  },
-  "ValidateAccount": {...}
+  }
 }
 
-# Step 2: Design goals using discovered tools
+# Step 3: Design goals using MCP server reference
 # goals/finance.py - Focus on agent behavior and UX  
 goal_finance_advisor = AgentGoal(
     agent_name="Finance Assistant",
     agent_friendly_description="Help with banking and credit services",
     starter_prompt="Hi! I can help with your banking and credit needs...",
     
-    # Use MCP server with specific tools
+    # Reference MCP server (tools auto-discovered at runtime)
     mcp_server_definition=get_banking_mcp_server_definition(
-        included_tools=["CheckCreditScore", "ValidateAccount"]  # From discovery
+        included_tools=["CheckCreditScore", "ValidateAccount"]
     ),
 )
 ```
 
-**Goal Team Benefits:**
-- ✅ **Can call MCP server** via `mcp_list_tools()`
-- ✅ **Get metadata automatically** (tool names, descriptions, parameters, required fields)  
-- ✅ **Know exactly what each tool does** from schema
+**Current Goal Team Benefits:**
+- ✅ **Runtime tool discovery** via `mcp_list_tools()` activity
+- ✅ **Automatic metadata** (tool names, descriptions, parameters, required fields)  
+- ✅ **Schema-driven validation** from MCP inputSchema
 - ✅ **Design agent personas** around discovered capabilities
-- ✅ **Zero tool maintenance** - new tools auto-discovered
+- ✅ **Dynamic tool loading** - no manual maintenance needed
 
-**Goal Manager Benefits:**
+**Current Goal Manager Benefits:**
 - ✅ **Design freedom** - choose the best tool composition for each agent
-- ✅ **Zero tool maintenance** - new tools automatically available via categories
-- ✅ **Fine control** - include/exclude exactly what you want
+- ✅ **Runtime discovery** - tools automatically available when server is referenced
+- ✅ **Fine control** - include/exclude specific tools via included_tools
 - ✅ **Focus on UX** - agent personalities, conversation flows, user experience
-- ✅ **Always up-to-date** - rest assured all tools are automatically exposed
+- ✅ **Schema validation** - parameter validation handled automatically
 
 ---
 
-### **🔄 Zero-Deployment Bridge Between Teams**
+### **🔄 Current Team Workflow**
 
 ```mermaid
 graph LR
     subgraph ToolTeam [🛠️ Tool Development Team]
         BuildMCP[Build MCP Server<br/>any language/framework]
-        DeployMCP[Deploy Independently<br/>https://new-service.com]
-        RegisterEndpoint[Register in<br/>config/mcp_endpoints.json]
+        PublishNPM[Publish to NPM<br/>@company/service_mcp]
+        NotifyGoalTeam[Notify Goal Team<br/>"Added @company/service_mcp"]
     end
     
-    subgraph YodaSystem [🧠 YODA Auto-Discovery System]
-        ScanEndpoints[Scan MCP Endpoints<br/>shared/mcp_auto_discovery.py]
-        DiscoverTools[Auto-Discover Tools<br/>Runtime MCP introspection]
-        CacheTools[Cache Tool Definitions<br/>In-memory registry]
+    subgraph YodaSystem [🧠 Current YODA MCP System]
+        AddConfig[Add to mcp_config.py<br/>get_service_mcp_definition()]
+        RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
+        DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools method]
     end
     
     subgraph AgentTeam [🎨 Agent Design Team]
         DesignAgent[Design agent behavior<br/>goals/finance.py]
-        SelectCategories[mcp_tool_categories = finance]
+        ReferenceMCP[Reference MCP server<br/>mcp_server_definition]
     end
     
-    BuildMCP --> DeployMCP
-    DeployMCP --> RegisterEndpoint
-    RegisterEndpoint --> ScanEndpoints
-    ScanEndpoints --> DiscoverTools
-    DiscoverTools --> CacheTools
-    CacheTools --> SelectCategories
-    SelectCategories --> DesignAgent
+    BuildMCP --> PublishNPM
+    PublishNPM --> NotifyGoalTeam
+    NotifyGoalTeam --> AddConfig
+    AddConfig --> ReferenceMCP
+    ReferenceMCP --> RuntimeDiscovery
+    RuntimeDiscovery --> DynamicLoading
+    DynamicLoading --> DesignAgent
     
     classDef toolTeam fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef agentTeam fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
@@ -293,12 +300,12 @@ graph LR
     class YodaSystem system
 ```
 
-**Perfect Zero-Deployment Workflow:**
-1. **Tool developers** build + deploy MCP server independently (any tech stack)
-2. **Tool developers** register endpoint in `config/mcp_endpoints.json` (only YODA touch)
-3. **YODA** automatically discovers tools from registered MCP endpoints
-4. **Agent designers** select tools by category or endpoint - instantly available!
-5. **Zero coordination needed** between teams! **Zero YODA deployments!**
+**Current Low-Deployment Workflow:**
+1. **Tool developers** build + publish MCP server to NPM (any tech stack)
+2. **Goal team** adds ~10 lines to `shared/mcp_config.py` (centralized registry)
+3. **Goals reference MCP servers** - tools automatically discovered at runtime
+4. **Minimal coordination** between teams! **NPM handles distribution!**
+5. **Runtime discovery** means tools are available immediately when goal activates
 
 ---
 
