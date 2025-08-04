@@ -32,24 +32,18 @@ graph TB
         MCPClientManager --> RuntimeDiscovery["<b>Runtime Tool Discovery</b><br/><i>mcp_list_tools activity</i>"]
     end
     
-    YodaBrain --> ExternalMCP
-    
     subgraph ExternalMCP ["🌐 <b>External MCP Ecosystem</b>"]
-        direction TB
-        BusinessAPI["<b>Business API Server</b><br/><i>npx @company/business-mcp</i>"]
+        BusinessAPI["<b>Business API</b><br/><i>npx @company/business-mcp</i>"]
         AnalyticsService["<b>Analytics Service</b><br/><i>npx @company/analytics-mcp</i>"]
         IntegrationHub["<b>Integration Hub</b><br/><i>npx @company/integration-mcp</i>"]
     end
     
-    ExternalMCP --> Infrastructure
-    
-    subgraph Infrastructure ["🏗️ <b>Infrastructure Layer</b>"]
-        direction TB
-        Postgres[("<b>PostgreSQL Database</b><br/><i>Temporal Persistence</i>")]
+    subgraph Infrastructure ["🏗️ <b>Infrastructure</b>"]
+        Postgres[("<b>PostgreSQL</b><br/><i>Temporal Persistence</i>")]
         NPMRegistry[("<b>NPM Registry</b><br/><i>MCP Package Distribution</i>")]
     end
     
-    %% Specific Connections
+    %% Connections
     MCPClientManager --> BusinessAPI
     MCPClientManager --> AnalyticsService  
     MCPClientManager --> IntegrationHub
@@ -57,9 +51,7 @@ graph TB
     AnalyticsService -.->|Discovery| RuntimeDiscovery
     IntegrationHub -.->|Discovery| RuntimeDiscovery
     Temporal --> Postgres
-    BusinessAPI --> NPMRegistry
-    AnalyticsService --> NPMRegistry
-    IntegrationHub --> NPMRegistry
+    ExternalMCP --> NPMRegistry
     
     classDef brain fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
     classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
@@ -150,21 +142,21 @@ goal_business_assistant = AgentGoal(
 
 ```mermaid
 graph LR
-    subgraph ToolTeam [🛠️ Tool Development Team]
-        BuildMCP[Build MCP Server<br/>any language/framework]
-        PublishNPM[Publish to NPM<br/>@company/business-mcp]
-        NotifyGoalTeam[Notify Goal Team<br/>"Added @company/business-mcp"]
+    subgraph ToolTeam ["🛠️ <b>Tool Development Team</b>"]
+        BuildMCP["<b>Build MCP Server</b><br/><i>any language/framework</i>"]
+        PublishNPM["<b>Publish to NPM</b><br/><i>@company/business-mcp</i>"]
+        NotifyGoalTeam["<b>Notify Goal Team</b><br/><i>Added @company/business-mcp</i>"]
     end
     
-    subgraph YodaSystem [🧠 YODA MCP System]
-        AddConfig[Add to mcp_config.py<br/>get_business_mcp_definition()]
-        RuntimeDiscovery[Runtime Tool Discovery<br/>mcp_list_tools activity]
-        DynamicLoading[Dynamic Tool Loading<br/>load_mcp_tools method]
+    subgraph YodaSystem ["🧠 <b>YODA MCP System</b>"]
+        AddConfig["<b>Add to mcp_config.py</b><br/><i>get_business_mcp_definition()</i>"]
+        RuntimeDiscovery["<b>Runtime Tool Discovery</b><br/><i>mcp_list_tools activity</i>"]
+        DynamicLoading["<b>Dynamic Tool Loading</b><br/><i>load_mcp_tools method</i>"]
     end
     
-    subgraph AgentTeam [🎨 Agent Design Team]
-        DesignAgent[Design agent behavior<br/>goals/business.py]
-        ReferenceMCP[Reference MCP server<br/>mcp_server_definition]
+    subgraph AgentTeam ["🎨 <b>Agent Design Team</b>"]
+        DesignAgent["<b>Design agent behavior</b><br/><i>goals/business.py</i>"]
+        ReferenceMCP["<b>Reference MCP server</b><br/><i>mcp_server_definition</i>"]
     end
     
     BuildMCP --> PublishNPM
