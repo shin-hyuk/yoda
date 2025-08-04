@@ -285,3 +285,156 @@ example_conversation_history="\n ".join([
     "agent: Your token is valid!"
 ])
 ```
+
+---
+
+## **JWT Token Authentication Architecture**
+
+**Use Case**: YODA embedded in existing authenticated platforms, where business MCPs need user-specific authorization.
+
+### **Complete JWT Flow Architecture**
+
+```mermaid
+graph TD
+    subgraph Frontend ["🌐 Frontend (Embedded in Portal)"]
+        PortalSession["Portal Session<br/>sessionId: abc123"]
+        YodaUI["YODA Chat UI<br/>React Component"]
+        PortalSession --> YodaUI
+    end
+    
+    subgraph YODA ["🧠 YODA System"]
+        API["FastAPI<br/>/send-prompt"]
+        Workflow["AgentGoalWorkflow<br/>session_context: abc123"]
+        JWTActivity["MCP Activity<br/>GetJWTFromSession"]
+        
+        API --> Workflow
+        Workflow --> JWTActivity
+    end
+    
+    subgraph AuthMCP ["🔐 Auth MCP Server"]
+        GetJWTTool["GetJWTFromSession<br/>MCP Tool"]
+        PortalAPI["Portal API Call<br/>GET /api/session/abc123"]
+        
+        JWTActivity --> GetJWTTool
+        GetJWTTool --> PortalAPI
+    end
+    
+    subgraph BusinessMCP ["🏢 Business MCP Server"]
+        CustomerTool["GetCustomerOrders<br/>Requires JWT"]
+        BusinessAPI["Business API<br/>Authorization: Bearer jwt_token"]
+        
+        CustomerTool --> BusinessAPI
+    end
+    
+    %% JWT Flow
+    YodaUI -->|"{ prompt, sessionId }"| API
+    PortalAPI -->|"{ jwt_token, user_id, scopes }"| GetJWTTool
+    GetJWTTool -->|"JWT Response"| JWTActivity
+    JWTActivity -->|"Store JWT"| Workflow
+    Workflow -->|"Pass JWT to tools"| CustomerTool
+    
+    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef yoda fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef auth fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef business fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Frontend frontend
+    class YODA yoda
+    class AuthMCP auth
+    class BusinessMCP business
+```
+
+### **Implementation Changes (Minimal)**
+
+**1. Frontend Changes (~3 lines)**
+```javascript
+// frontend/src/services/api.js
+async sendMessage(message) {
+    const sessionId = window.portalSession?.id;  // ← NEW: Get from embedded context
+    const res = await fetch(`${API_BASE_URL}/send-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            prompt: message,
+            session_context: { sessionId }  // ← NEW: Pass session
+        })
+    });
+}
+```
+
+**2. Backend Changes (~5 lines)**
+```python
+# api/main.py
+@app.post("/send-prompt")
+async def send_prompt(request: dict):
+    prompt = request.get("prompt")
+    session_context = request.get("session_context")  # ← NEW
+    
+    combined_input = CombinedInput(
+        tool_params=AgentGoalWorkflowParams(None, None),
+        agent_goal=get_initial_agent_goal(),
+        session_context=session_context  # ← NEW
+    )
+```
+
+**3. Workflow Changes (~8 lines)**
+```python
+# workflows/agent_goal_workflow.py
+async def run(self, combined_input: CombinedInput):
+    self.session_context = combined_input.session_context  # ← NEW
+    
+    # Get JWT if session provided
+    if self.session_context:
+        jwt_result = await workflow.execute_activity(
+            "GetJWTFromSession",  # ← NEW MCP tool (auth-mcp server)
+            self.session_context
+        )
+        self.jwt_token = jwt_result.get("jwt_token")  # ← NEW
+```
+
+**4. Tool Execution Changes (~2 lines)**
+```python
+# workflows/workflow_helpers.py
+mcp_args = tool_data["args"].copy()
+mcp_args["server_definition"] = goal.mcp_server_definition
+if hasattr(workflow_instance, 'jwt_token'):
+    mcp_args["jwt_token"] = workflow_instance.jwt_token  # ← NEW
+```
+
+### **New MCP Server: @company/auth-mcp**
+
+```python
+# This is a NEW MCP server (external to YODA)
+{
+  "name": "GetJWTFromSession",
+  "description": "Exchange portal session ID for JWT token",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "sessionId": {"type": "string", "description": "Portal session identifier"}
+    },
+    "required": ["sessionId"]
+  },
+  "responseSchema": {
+    "type": "object",
+    "properties": {
+      "jwt_token": {"type": "string"},
+      "user_id": {"type": "string"},
+      "scopes": {"type": "array", "items": {"type": "string"}},
+      "expires_at": {"type": "string", "format": "date-time"}
+    }
+  },
+  "examples": {
+    "success": {
+      "jwt_token": "eyJhbGciOiJIUzI1NiIs...",
+      "user_id": "user_123",
+      "scopes": ["finance:read", "hr:write"],
+      "expires_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Total YODA Changes: ~18 lines across 4 files**
+
+**Why So Minimal?** YODA's MCP architecture is already designed for this - we're just adding session context to the existing flow and using MCP tools for authentication just like any other business logic.
