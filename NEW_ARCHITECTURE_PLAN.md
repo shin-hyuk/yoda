@@ -373,7 +373,7 @@ The business MCP server validates the JWT token and scopes before executing the 
 
 ## **Alert & Schedule System Architecture**
 
-**Use Case**: Users can set alerts ("notify when BTC drops 5%") and schedules ("sell when BTC rises 5%") through natural language interaction with YODA, creating a global orchestration system accessible from anywhere.
+**Use Case**: Users can set alerts ("notify when BTC drops 5%") and schedules ("sell when BTC rises 5%") through natural language interaction with YODA.
 
 ### **Implementation Overview**
 
@@ -385,27 +385,34 @@ alerts_table: user_id, condition, status (active/triggered/dismissed), created_a
 schedules_table: user_id, action, condition, status (pending/executed/failed), created_at
 ```
 
-**Frontend Enhancement**: Add notification area above the chat interface:
+**Frontend Enhancement**: Add notification area above the chat interface.
 
-```javascript
-// New UI component above search box
-<AlertsScheduleBox>
-  <Alerts>
-    • BTC Alert: -5% trigger (active)
-    • Unpaid Fee: $50 overdue (triggered)
-  </Alerts>
-  <Schedules>
-    • BTC Sell: +5% trigger (pending)
-    • Monthly Report: Completed ✓
-  </Schedules>
-</AlertsScheduleBox>
+**JSON Feed Structure:**
+
+```json
+// Alerts table feed
+{
+  "alerts": [
+    {"condition": "BTC drops 5%", "status": "active", "created_at": "2024-01-15"},
+    {"condition": "Unpaid fee $50", "status": "triggered", "created_at": "2024-01-10"}
+  ]
+}
+
+// Schedules table feed  
+{
+  "schedules": [
+    {"action": "Sell BTC", "condition": "BTC rises 5%", "status": "pending", "created_at": "2024-01-15"},
+    {"action": "Monthly report", "condition": "1st of month", "status": "executed", "created_at": "2024-01-01"}
+  ]
+}
 ```
+
+**Status Types**:
+- **Alerts**: `active`, `triggered`, `dismissed`
+- **Schedules**: `pending`, `executed`, `failed`
 
 **User Flow Examples**:
 - **Alert**: "Let me know when my BTC value goes down more than 5%" → Creates alert entry with user's JWT token
 - **Schedule**: "Sell my BTC once it goes up 5%" → Creates schedule entry with execution logic
-- **Global Access**: Users can interact with YODA from any location, all alerts/schedules tracked by JWT identity
-
-**Status Types**: `active`, `triggered`, `executed`, `failed`, `dismissed`, `completed`
 
 This extends YODA from a conversational agent to a persistent orchestration platform where users can set long-term automation and monitoring across all their integrated business tools.
