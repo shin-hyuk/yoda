@@ -34,15 +34,16 @@ YODA is a Temporal-powered AI agent system for integrating external business too
 
 ---
 
-## Architecture Overview (MCP servers for tools)
+## Architecture Overview: MCP Servers for Tools
 
-### **MCP Server Integration Architecture**
+YODA's architecture is modular by design: YODA itself acts as the orchestrator ("the brain"), while all business logic and integrations are provided by independently developed MCP servers ("the hands"). MCP servers expose tools without needing to know anything about the orchestrator's internals, enabling infinite scalability and rapid, parallel development. Tool discovery is automatic—adding a new tool is as simple as registering a new MCP server endpoint, with no need for redeployment or deep integration work.
 
-**Quick Setup:**
+### Tool Registration
+
 1. Add server definition to `shared/mcp_config.py`
 2. Reference in goal files 
 3. Publish via NPM
-4. Tools auto-discovered at runtime
+4. Tools are auto-discovered at runtime
 
 ```mermaid
 graph TB
