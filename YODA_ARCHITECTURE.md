@@ -246,7 +246,7 @@ graph TD
 
 ## **Enhanced MCP Tool Discovery**
 
-Currently, YODA only requires MCP servers to define an `inputSchema` for each tool, which forces goal teams to guess tool response formats. This enhancement extends the MCP server contract: MCP servers must now also provide a `responseSchema` and `examples`, ensuring goal teams have complete input and output details for accurate agent design.
+The MCP protocol requires servers to define an `inputSchema` for each tool, which forces goal teams to guess tool response formats. YODA enhances this by extending the MCP server contract: MCP servers must also provide a `responseSchema` and `examples`, ensuring goal teams have complete input and output details for accurate agent design.
 
 **Current Limitation:**
 - MCP servers only provide `inputSchema` for tool parameters
