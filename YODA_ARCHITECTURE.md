@@ -20,29 +20,19 @@
                                 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣁⣀⠀⠀⠀⠀⣿⡀⠀⣿⠀⠀⠀⠀⠀⠀⢀⣈⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
                                 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠟⠛⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
-## Table of Contents
-- [Overview](#overview)
-- [MCP Servers for Tools](#mcp-servers-for-tools)
-- [Independent Team Development](#independent-team-development)
-- [Low-Friction Team Workflow](#low-friction-team-workflow)
-- [Goal Switching Architecture](#goal-switching-architecture)
-- [Response Schema & Examples Integration to MCP Schema](#response-schema--examples-integration-to-mcp-schema)
-- [JWT Token Authentication Architecture](#jwt-token-authentication-architecture)
-- [Alert & Schedule System Architecture](#alert--schedule-system-architecture)
-
----
-
 ## Overview
 
 YODA is a Temporal-powered AI agent system for integrating external business tools via Model Context Protocol (MCP) servers. This document covers MCP integration, team workflows, JWT authentication, goal switching, and persistent alert/schedule systems.
 
 ### 🧩 Architectural Traits
 
-- **MCP Servers for Tools**: Tools are modular and auto-discovered via NPM
-- **Independent Team Development**: Teams work in parallel with minimal coordination
-- **Session-Based JWT Authorization**: Portal session IDs are exchanged for scoped JWT tokens to control tool access
-- **Persistent User State**: Alerts and schedules are stored as JSON feeds linked to user JWT context
-- **Multi-Agent Orchestration**: Users can switch between agent personas with flexible goal management
+- **[MCP Servers for Tools](#mcp-servers-for-tools)**: Tools are modular and auto-discovered via NPM
+- **[Independent Team Development](#independent-team-development)**: Teams work in parallel with minimal coordination
+- **[Low-Friction Team Workflow](#low-friction-team-workflow)**: Minimal coordination between teams through simple 5-step process
+- **[Goal Switching Architecture](#goal-switching-architecture)**: Users can switch between agent personas with flexible goal management
+- **[Response Schema & Examples](#response-schema--examples-integration-to-mcp-schema)**: Enhanced MCP integration with structured response validation
+- **[JWT Token Authentication](#jwt-token-authentication-architecture)**: Portal session IDs are exchanged for scoped JWT tokens to control tool access
+- **[Alert & Schedule System](#alert--schedule-system-architecture)**: Persistent alerts and schedules stored as JSON feeds linked to user JWT context
 
 ---
 
