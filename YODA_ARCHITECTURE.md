@@ -178,8 +178,6 @@ goal_business_assistant = AgentGoal(
 
 Original Temporal supports both single-agent and multi-agent modes, but YODA defaults to multi-goal mode—enabling agent orchestration and fully realizing the MCP framework.
 
-The system implements a dual-path goal switching mechanism that gives users maximum flexibility:
-
 ```mermaid
 graph TD
     subgraph AnyGoal ["Any Active Goal (Travel, HR, Finance, etc.)"]
@@ -373,8 +371,7 @@ graph TD
 ```json
 {
   "date_range": "2024-01-01,2024-01-31",
-  "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  "comment": "jwt_token includes customer_id"
+  "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."  // jwt_token includes customer_id
 }
 ```
 
@@ -382,13 +379,12 @@ graph TD
 
 ---
 
-## **Alert & Schedule System Architecture**
+## **Persistent Alerts & Schedules**
 
-**Use Case**: Users can set alerts ("notify when BTC drops 5%") and schedules ("sell when BTC rises 5%") through natural language interaction with YODA. Once the user connects to MCP servers with their JWT token through session ID, the orchestrator reads all alerts and schedules from the unified PostgreSQL database and displays them in the notification area of the chat interface.
+YODA enables users to set persistent alerts and schedules through natural language, automating monitoring and actions across all integrated business tools. Alerts and schedules are securely stored and managed in the platform's database, and surfaced in the chat interface for real-time awareness and control.
 
-### **Implementation Overview**
-
-**Database Extension**: Add alerts and schedules tables to existing PostgreSQL (Temporal persistence database):
+**Database Extension:**
+Add alerts and schedules tables to existing PostgreSQL (Temporal persistence database):
 
 ```sql
 -- User alerts/schedules identified by JWT token
@@ -396,7 +392,8 @@ alerts_table: user_id, condition, status (active/triggered/dismissed), created_a
 schedules_table: user_id, action, condition, status (pending/executed/failed), created_at
 ```
 
-**Frontend Enhancement**: Add notification area above the chat interface.
+**Frontend Enhancement:**
+Add notification area above the chat interface.
 
 **JSON Feed Structure:**
 
@@ -418,8 +415,6 @@ schedules_table: user_id, action, condition, status (pending/executed/failed), c
 }
 ```
 
-**Status Types**:
-- **Alerts**: `active`, `triggered`, `dismissed`
-- **Schedules**: `pending`, `executed`, `failed`
-
-This extends YODA from a conversational agent to a persistent orchestration platform where users can set long-term automation and monitoring across all their integrated business tools.
+**Status Types:**
+- **Alerts:** `active`, `triggered`, `dismissed`
+- **Schedules:** `pending`, `executed`, `failed`
