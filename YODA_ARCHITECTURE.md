@@ -248,11 +248,6 @@ graph TD
 
 The MCP protocol requires servers to define an `inputSchema` for each tool, which forces goal teams to guess tool response formats. YODA enhances this by extending the MCP server contract: MCP servers must also provide a `responseSchema` and `examples`, ensuring goal teams have complete input and output details for accurate agent design.
 
-**Current Limitation:**
-- MCP servers only provide `inputSchema` for tool parameters
-- Goal teams manually write example responses in `example_conversation_history`
-- No formal output schema validation
-
 **Enhanced MCP Schema:**
 
 ```python
@@ -291,11 +286,11 @@ The MCP protocol requires servers to define an `inputSchema` for each tool, whic
 }
 ```
 
-**Goal Team Benefit:**
+**Impact for Goal Teams:**
 
-Goal teams see precise response structure and concrete examples, eliminating guesswork when designing agent conversations.
+Goal teams see precise response structures and concrete examples, eliminating guesswork and the need to manually write example responses in `example_conversation_history`.
 
-**Current example_conversation_history approach:**
+_Current example_conversation_history approach:_
 ```python
 example_conversation_history="\n ".join([
     "user_confirmed_tool_run: <user clicks confirm on ValidateJWT tool>",
