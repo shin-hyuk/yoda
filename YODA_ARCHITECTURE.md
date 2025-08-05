@@ -176,6 +176,8 @@ goal_business_assistant = AgentGoal(
 
 ## **Goal Switching Architecture**
 
+Original Temporal supports both single-agent and multi-agent modes, but YODA defaults to multi-goal mode—enabling agent orchestration and fully realizing the MCP framework.
+
 The system implements a dual-path goal switching mechanism that gives users maximum flexibility:
 
 ```mermaid
@@ -240,20 +242,18 @@ graph TD
     class AgentSelection agentHub
 ```
 
-Users never get "stuck" in a goal - they always have two escape routes. The agent selection hub serves as the universal switching point, providing instant gratification without needing to complete the current goal.
-
-The system supports both single-mode (locked to one agent) and multi-mode (flexible goal switching). **YODA defaults to multi-mode to enable the agent orchestration layer and provide the best user experience.**
-
 ---
 
-## **Response Schema & Examples Integration to MCP Schema**
+## **Enhanced MCP Tool Discovery**
 
-**Current State**: 
+Currently, YODA only requires MCP servers to define an `inputSchema` for each tool, which forces goal teams to guess tool response formats. This enhancement extends the MCP server contract: MCP servers must now also provide a `responseSchema` and `examples`, ensuring goal teams have complete input and output details for accurate agent design.
+
+**Current Limitation:**
 - MCP servers only provide `inputSchema` for tool parameters
 - Goal teams manually write example responses in `example_conversation_history`
 - No formal output schema validation
 
-**Enhanced MCP Schema Integration:**
+**Enhanced MCP Schema:**
 
 ```python
 # MCP Server: @company/auth-mcp
@@ -291,12 +291,9 @@ The system supports both single-mode (locked to one agent) and multi-mode (flexi
 }
 ```
 
-**Implementation Purpose for Goal Teams:**
+**Goal Team Benefit:**
 
-This enhancement is specifically designed so **goal teams know exactly what responses are expected to be fed to the LLM**:
-
-1. **Schema + Examples**: Goal teams see precise response structure and concrete examples, eliminating guesswork
-2. **MCP-Informed Manual Writing**: Goal teams copy from MCP examples to design accurate agent conversations
+Goal teams see precise response structure and concrete examples, eliminating guesswork when designing agent conversations.
 
 **Current example_conversation_history approach:**
 ```python
