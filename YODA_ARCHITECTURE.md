@@ -26,13 +26,12 @@ YODA is a Temporal-powered AI agent system for integrating external business too
 
 ### 🧩 Architectural Traits
 
-- **[MCP Servers for Tools](#mcp-servers-for-tools)**: Tools are modular and auto-discovered via NPM
-- **[Independent Team Development](#independent-team-development)**: Teams work in parallel with minimal coordination
-- **[Low-Friction Team Workflow](#low-friction-team-workflow)**: Minimal coordination between teams through simple 5-step process
-- **[Goal Switching Architecture](#goal-switching-architecture)**: Users can switch between agent personas with flexible goal management
-- **[Response Schema & Examples](#response-schema--examples-integration-to-mcp-schema)**: Enhanced MCP integration with structured response validation
-- **[JWT Token Authentication](#jwt-token-authentication-architecture)**: Portal session IDs are exchanged for scoped JWT tokens to control tool access
-- **[Alert & Schedule System](#alert--schedule-system-architecture)**: Persistent alerts and schedules stored as JSON feeds linked to user JWT context
+- **[MCP Servers for Tools](#mcp-servers-for-tools):** Modular tools, auto-discovered via NPM
+- **[Independent Team Development](#independent-team-development):** Tool and goal teams work in parallel with minimal coordination
+- **[Goal Switching Architecture](#goal-switching-architecture):** Users can seamlessly switch between agent personas and goals
+- **[Enhanced MCP Tool Discovery](#enhanced-mcp-tool-discovery):** Complete input/output schemas and examples for every tool
+- **[JWT-Based Authorization Flow](#jwt-based-authorization-flow):** User access is securely managed with JWT tokens across all tools
+- **[Persistent Alerts & Schedules](#persistent-alerts--schedules):** User-specific alerts and schedules are managed as stateful JSON feeds within the orchestrator
 
 ---
 
@@ -381,7 +380,7 @@ graph TD
 
 ## **Persistent Alerts & Schedules**
 
-YODA enables users to set persistent alerts and schedules through natural language, automating monitoring and actions across all integrated business tools. Alerts and schedules are securely stored and managed in the platform's database, and surfaced in the chat interface for real-time awareness and control.
+YODA manages persistent alerts and schedules as stateful JSON feeds, linked to user JWT tokens and stored within the orchestration engine. This design ensures user-specific automation and notifications are reliably maintained across all integrated business tools.
 
 **Database Extension:**
 Add alerts and schedules tables to existing PostgreSQL (Temporal persistence database):
