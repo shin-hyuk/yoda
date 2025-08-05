@@ -42,8 +42,8 @@ YODA's architecture is modular by design: YODA itself acts as the orchestrator (
 ### Tool Registration
 
 1. Add server definition to `shared/mcp_config.py`
-2. Reference in goal files 
-3. Publish via NPM
+2. Reference in goal files (`goals/{goal_name}.py`) 
+3. Publish via NPM (`@{company}/{mcp-server-name}`)
 4. Tools are auto-discovered at runtime
 
 ```mermaid
@@ -118,10 +118,10 @@ Tool teams build and maintain MCP servers; goal teams design agent experiences. 
 }
 
 # 3. Publish to NPM
-npm publish @company/business-mcp
+npm publish @{company}/{mcp-server-name}
 
 # 4. Notify goal team
-"Hey, we added @company/business-mcp with order management and customer tools"
+"Hey, we added @{company}/{mcp-server-name} with order management and customer tools"
 ```
 
 ---
@@ -137,7 +137,7 @@ def get_business_mcp_server_definition(included_tools: list[str]) -> MCPServerDe
     return MCPServerDefinition(
         name="business-mcp",
         command="npx",
-        args=["-y", "@company/business-mcp"],
+        args=["-y", "@{company}/{mcp-server-name}"],
         included_tools=included_tools,
     )
 
@@ -158,7 +158,7 @@ def get_business_mcp_server_definition(included_tools: list[str]) -> MCPServerDe
 }
 
 # Step 3: Design goals using MCP server reference
-# goals/business.py - Focus on agent behavior and UX  
+# goals/{goal_name}.py - Focus on agent behavior and UX  
 goal_business_assistant = AgentGoal(
     agent_name="Business Assistant",
     agent_friendly_description="Help with customer orders and business operations",
@@ -248,7 +248,7 @@ The MCP protocol requires servers to define an `inputSchema` for each tool, whic
 **Enhanced MCP Schema:**
 
 ```python
-# MCP Server: @company/auth-mcp
+# MCP Server: @{company}/{auth-mcp-server}
 {
   "name": "ValidateJWT",
   "description": "Validate user JWT token and extract permissions",
