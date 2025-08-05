@@ -22,7 +22,7 @@
 
 ## Overview
 
-YODA is a Temporal-powered AI agent system for integrating external business tools via Model Context Protocol (MCP) servers. This document covers MCP integration, team workflows, JWT authentication, goal switching, and persistent alert/schedule systems.
+YODA is a Temporal-powered AI agent system for integrating external business tools via Model Context Protocol (MCP) servers. This document covers MCP integration, team workflows, JWT authentication, agent orchestration, and persistent alert/schedule systems.
 
 ### Architectural Traits
 
@@ -43,16 +43,12 @@ YODA's architecture is modular by design: YODA itself acts as the orchestrator (
 
 ### Tool Registration & Deployment
 
-1. **Publish MCP server via NPM**  
-   _Make your new MCP server available as an installable package (e.g., `npm publish @company/business-mcp`)._
-2. **Add server definition**  
-   _Register the published MCP server in the configuration file (e.g., `shared/mcp_config.py`)._
-3. **Reference server in goal files**  
-   _Connect the registered server to your agent/goal logic (e.g., in `goals/{goal_name}.py`)._
-4. **Tools are auto-discovered at runtime**  
-   _The system automatically detects and loads all available tools from registered MCP servers (see `activities/tool_activities.py::mcp_list_tools`)._
+1. Publish MCP server via NPM
+2. Add server definition
+3. Reference server in goal files
+4. Tools are auto-discovered at runtime
 
-**Note:** For the exact file paths and detailed step-by-step process, see the [Independent Team Development](#independent-team-development) section.
+**Note:** For the exact file paths, code references, and detailed step-by-step process, see the [Independent Team Development](#independent-team-development) section.
 
 ```mermaid
 graph TB
@@ -177,6 +173,66 @@ goal_business_assistant = AgentGoal(
         included_tools=["GetCustomerOrders", "UpdateOrderStatus"]
     ),
 )
+```
+
+---
+
+## Streamlined Use Case Workflow
+
+YODA's architecture enables rapid, low-friction development of new business use cases by clearly separating the responsibilities of goal teams and tool teams. This workflow ensures that new tool requirements are communicated unambiguously, allowing tool teams to develop and deliver new MCP servers with minimal coordination and maximum efficiency.
+
+### Step-by-Step Workflow
+
+1. **Goal Team: Define & Send Requirement**
+   - The goal team identifies a new business use case and prepares a structured MCP server/tool requirement.
+   - The requirement includes:
+     - **Business need/use case description**
+     - **Tool name(s) and purpose**
+     - **Input schema** (parameters, types, descriptions)
+     - **Response schema** (expected output structure)
+     - **Example requests and responses**
+
+2. **Tool Team: Develop MCP Server**
+   - The tool team receives the requirement and immediately begins development, using the provided schemas and examples as the contract.
+   - No further clarification is needed if the requirement is complete.
+
+3. **Tool Team: Publish & Notify**
+   - Once development is complete, the tool team publishes the MCP server to NPM (e.g., `npm publish @company/business-mcp`).
+   - The tool team notifies the goal team that the new server/tools are available.
+
+4. **Goal Team: Integrate & Activate**
+   - The goal team adds the server definition, references it in the goal files, and the tools are auto-discovered at runtime.
+   - The new use case is now live and available for users.
+
+### Example: MCP Server/Tool Requirement Template
+
+```yaml
+# Example MCP Tool Requirement (to be sent from goal team to tool team)
+use_case: "Enable order tracking for customers"
+tools:
+  - name: "TrackOrder"
+    description: "Retrieve the current status of a customer order"
+    inputSchema:
+      type: object
+      properties:
+        order_id:
+          type: string
+          description: "Unique identifier for the order"
+      required: ["order_id"]
+    responseSchema:
+      type: object
+      properties:
+        status:
+          type: string
+          description: "Current status of the order"
+        estimated_delivery:
+          type: string
+          format: date
+          description: "Estimated delivery date"
+      required: ["status"]
+    examples:
+      request: { "order_id": "ORD12345" }
+      response: { "status": "Shipped", "estimated_delivery": "2024-05-10" }
 ```
 
 ---
