@@ -301,11 +301,9 @@ example_conversation_history="\n ".join([
 
 ---
 
-## **JWT Token Authentication Architecture**
+## **JWT-Based Authorization Flow**
 
-**Use Case**: YODA embedded in existing authenticated platforms, where business MCPs need user-specific authorization.
-
-### **Complete JWT Flow Architecture**
+YODA uses JWT-based authorization to securely connect user sessions with business tools. The system retrieves JWT tokens from an Auth MCP server using the user's session ID, then passes these tokens to business MCP servers to enforce fine-grained, user-specific access control for all tool operations.
 
 ```mermaid
 graph TD
@@ -357,7 +355,7 @@ graph TD
     class BusinessMCP business
 ```
 
-JWT tokens will be obtained from the Auth MCP server using the session ID passed from the frontend. These tokens are then used to provide authorization restrictions, controlling which tools and data each user can access within the platform.
+These tokens are used to provide authorization restrictions, controlling which tools and data each user can access within the platform.
 
 **Example JWT Flow:**
 
