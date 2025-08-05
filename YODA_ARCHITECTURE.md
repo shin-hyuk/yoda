@@ -44,9 +44,9 @@ YODA's architecture is modular by design: YODA itself acts as the orchestrator (
 ### Tool Registration
 
 1. Add server definition to `shared/mcp_config.py`
-2. Reference in goal files (`goals/{goal_name}.py`) 
+2. Server reference in goal files (`goals/{goal_name}.py`) 
 3. Publish via NPM (`@{company}/{mcp-server-name}`)
-4. Tools are auto-discovered at runtime
+4. Tools are auto-discovered at runtime (`activities/tool_activities.py::mcp_list_tools`)
 
 ```mermaid
 graph TB
