@@ -38,7 +38,7 @@ YODA is a Temporal-powered AI agent system for integrating external business too
 
 ## MCP Servers for Tools
 
-YODA's architecture is modular by design: YODA itself acts as the orchestrator ("the brain"), while all business logic and integrations are provided by independently developed MCP servers ("the hands"). MCP servers expose tools without needing to know anything about the orchestrator's internals, enabling infinite scalability and rapid, parallel development. Tool discovery is automatic—adding a new tool is as simple as registering a new MCP server endpoint, with no need for redeployment or deep integration work.
+YODA's architecture is modular by design: YODA itself acts as the orchestrator ("the brain"), while all business logic and integrations are provided by independently developed MCP servers ("the hands"). MCP servers expose tools without needing to know anything about the orchestrator's internals, enabling infinite scalability and rapid, parallel development.
 
 ### Tool Registration
 
@@ -92,6 +92,8 @@ graph TB
 ```
 
 ## **Independent Team Development**
+
+Tool teams build and maintain MCP servers; goal teams design agent experiences. Tools are automatically discovered—adding a new tool is as simple as registering a new MCP server endpoint, with no redeployment or deep integration required.
 
 ### **🛠️ Tool Development Team**
 
@@ -169,20 +171,6 @@ goal_business_assistant = AgentGoal(
     ),
 )
 ```
-
----
-
-## **Low-Friction Team Workflow**
-
-The MCP integration enables minimal coordination between teams through a simple 5-step process:
-
-1. **Tool Development Team**: Build + publish MCP server to NPM (any tech stack + MCP protocol)
-2. **Goal Team**: Add ~10 lines to `shared/mcp_config.py` (centralized registry)
-3. **System Integration**: Goals reference MCP servers - tools automatically discovered at runtime
-4. **Distribution**: NPM handles all distribution - no manual coordination needed!
-5. **Immediate Availability**: Tools become available instantly when goal activates
-
-**Key Benefits**: Teams work independently, MCP protocol ensures compatibility, runtime discovery eliminates manual registration.
 
 ---
 
