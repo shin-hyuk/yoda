@@ -303,7 +303,7 @@ example_conversation_history="\n ".join([
 
 ## **JWT-Based Authorization Flow**
 
-YODA uses JWT-based authorization to securely connect user sessions with business tools. The system retrieves JWT tokens from an Auth MCP server using the user's session ID, then passes these tokens to business MCP servers to enforce fine-grained, user-specific access control for all tool operations.
+YODA uses JWT-based authorization to securely connect user sessions with business tools. The system retrieves JWT tokens from an Auth MCP server using the user's session ID, then passes these tokens to business MCP servers, which validate the tokens and scopes before executing any tool—ensuring each user can only access authorized tools and data.
 
 ```mermaid
 graph TD
@@ -355,7 +355,7 @@ graph TD
     class BusinessMCP business
 ```
 
-These tokens are used to provide authorization restrictions, controlling which tools and data each user can access within the platform.
+
 
 **Example JWT Flow:**
 
@@ -374,11 +374,11 @@ These tokens are used to provide authorization restrictions, controlling which t
 {
   "date_range": "2024-01-01,2024-01-31",
   "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  // jwt_token includes customer_id
+  "comment": "jwt_token includes customer_id"
 }
 ```
 
-The business MCP server validates the JWT token and scopes before executing the requested tool, ensuring users only access authorized data.
+
 
 ---
 
