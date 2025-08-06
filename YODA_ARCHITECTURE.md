@@ -231,11 +231,11 @@ graph TD
 
 ---
 
-## **Backend Infrastructure Tools**
+## **Backend Infrastructure MCP Servers**
 
-YODA's architecture separates **goal-oriented tools** (business logic for user interactions) from **backend infrastructure tools**. Backend infrastructure tools are divided into two distinct types: **orchestrator-level tools** that are used internally by YODA orchestrator to get user roles from specific platforms (portal, app, enterprise), and **goal-oriented backend tools** that are used by external MCP servers to provide universal functionality like alerts, scheduling, and notifications.
+YODA distinguishes between business logic MCP servers and backend infrastructure MCP servers. Backend infrastructure MCP servers fall into two categories: **orchestrator-level MCP servers** used internally by the orchestrator for platform-specific backend operations (authentication, user scoping, system management), and **support backend MCP servers** used by business MCP servers to provide universal features like alerts, scheduling, notifications, and analytics.
 
-### **Architecture Pattern: Two-Tier Backend Infrastructure**
+YODA's backend infrastructure is organized into two tiers: the orchestrator interacts with platform-specific MCP servers for internal backend needs, while business MCP servers interact with support backend MCP servers to access shared infrastructure features.
 
 ```mermaid
 graph TD
@@ -244,31 +244,31 @@ graph TD
         Workflow["AgentGoalWorkflow<br/>user scope management"]
     end
     
-    subgraph OrchBackend ["🔐 Orchestrator-Level Backend Tools"]
+    subgraph OrchMCP ["🔐 Orchestrator-Level MCP Servers"]
         PortalAuth["@portal/auth-mcp<br/>Portal JWT → roles"]
         AppAuth["@app/auth-mcp<br/>App JWT → roles"] 
         EnterpriseAuth["@enterprise/auth-mcp<br/>SSO JWT → roles"]
     end
     
-    subgraph GoalBackend ["🔧 Goal-Oriented Backend Tools"]
+    subgraph SupportMCP ["🔧 Support Backend MCP Servers"]
         AlertsMCP["@yoda/alerts-mcp<br/>CreateAlert<br/>GetUserAlerts"]
         ScheduleMCP["@yoda/scheduler-mcp<br/>CreateSchedule<br/>GetSchedules"]
         NotificationMCP["@yoda/notification-mcp<br/>SendEmail<br/>SendSMS"]
         AnalyticsMCP["@yoda/analytics-mcp<br/>TrackEvent<br/>GetMetrics"]
     end
     
-    subgraph BusinessTools ["🏢 Goal-Oriented Tools"]
+    subgraph GoalMCP ["🏢 Goal-Oriented MCP Servers"]
         CustomerMCP["@company/customer-mcp<br/>GetCustomerDetails<br/>UpdateCustomer"]
         FinanceMCP["@company/finance-mcp<br/>TransferMoney<br/>GetBalance"]
         HRMCP["@company/hr-mcp<br/>BookPTO<br/>GetPayroll"]
     end
     
-    %% Orchestrator uses platform-specific auth
+    %% Orchestrator uses orchestrator-level MCP servers
     YODA --> PortalAuth
     YODA --> AppAuth  
     YODA --> EnterpriseAuth
     
-    %% Business tools use goal-oriented backend tools
+    %% Goal-oriented MCP servers use support backend MCP servers
     CustomerMCP --> AlertsMCP
     CustomerMCP --> NotificationMCP
     FinanceMCP --> AlertsMCP
@@ -277,42 +277,31 @@ graph TD
     HRMCP --> AnalyticsMCP
     
     classDef orch fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef orchBackend fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef goalBackend fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
-    classDef business fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef orchMCP fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef supportMCP fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    classDef goalMCP fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     
     class YODA orch
-    class OrchBackend orchBackend
-    class GoalBackend goalBackend
-    class BusinessTools business
+    class OrchMCP orchMCP
+    class SupportMCP supportMCP
+    class GoalMCP goalMCP
 ```
 
 
 
-### **Orchestrator-Level Backend Tools**
+### **Orchestrator-Level MCP Servers**
 
-Platform-specific authentication servers that YODA Orchestrator uses to handle JWT complexity and map to standardized role categories:
+Orchestrator-level MCP servers are only used by the YODA orchestrator for internal backend operations. Examples: **@portal/auth-mcp** (maps portal JWTs to user roles), **@app/auth-mcp** (maps mobile app JWTs to user roles), **@enterprise/auth-mcp** (maps enterprise SSO to user roles). All return a standardized user context for downstream use.
 
-- **@portal/auth-mcp:** Maps portal JWT to clean role categories
-- **@app/auth-mcp:** Maps mobile app JWT to clean role categories  
-- **@enterprise/auth-mcp:** Maps enterprise SSO to clean role categories
+### **Support Backend MCP Servers**
 
-All return standardized format: `{"user_id": "...", "role_categories": ["csr"]}`
-
-### **Goal-Oriented Backend Tools**
-
-Universal infrastructure tools that any business MCP server can use:
-
-- **@yoda/alerts-mcp:** CreateAlert, GetUserAlerts, UpdateAlert
-- **@yoda/scheduler-mcp:** CreateSchedule, GetSchedules, ExecuteSchedule
-- **@yoda/notification-mcp:** SendEmail, SendSMS, SendPush
-- **@yoda/analytics-mcp:** TrackEvent, GetMetrics, GenerateReport
+Support backend MCP servers provide universal infrastructure features to all business MCP servers. Examples: **@yoda/alerts-mcp** (alerts and notifications), **@yoda/scheduler-mcp** (scheduling and automation), **@yoda/notification-mcp** (multi-channel notifications), **@yoda/analytics-mcp** (analytics and event tracking). These servers are platform-agnostic and can be used by any business logic MCP server.
 
 ---
 
 ## **Platform-Specific Auth Tools**
 
-YODA implements scope-based agent categories where each user role (client, csr, ops, sales) has dedicated agent goals with tailored behaviors and conversation styles. The system uses the appropriate platform authentication MCP server to handle JWT complexity and map enterprise authentication to clean role categories, with the `listAgents` tool providing scope-aware agent discovery.
+YODA uses the appropriate platform authentication MCP server to handle JWT complexity and map platform-specific authentication to clean, standardized user roles. This enables scope-aware agent discovery where each user role (client, csr, ops, sales) has dedicated agent goals with tailored behaviors and conversation styles.
 
 ```mermaid
 graph TD
@@ -331,11 +320,10 @@ graph TD
         Workflow --> ListAgents
     end
     
-    subgraph AuthMCP ["🔐 @entity/auth-mcp-server"]
-        AuthTool["AuthenticateUser<br/>sessionId → role_categories"]
-        JWTMapping["JWT Complexity Handler<br/>enterprise JWT → clean roles"]
-        
-        AuthTool --> JWTMapping
+    subgraph AuthMCP ["🔐 Platform-Specific Auth MCP Servers"]
+        PortalAuthMCP["@portal/auth-mcp<br/>Portal JWT → role_categories"]
+        AppAuthMCP["@app/auth-mcp<br/>App JWT → role_categories"] 
+        EnterpriseAuthMCP["@enterprise/auth-mcp<br/>SSO JWT → role_categories"]
     end
     
     subgraph Goals ["📁 Role-Based Goal Categories"]
@@ -350,7 +338,7 @@ graph TD
         SalesGoals --> SameTools
     end
     
-    subgraph BackendInfra ["🔧 Backend Infrastructure Tools"]
+    subgraph SupportMCP ["🔧 Support Backend MCP Servers"]
         AlertsMCP["@yoda/alerts-mcp<br/>CreateAlert, GetAlerts"]
         SchedulerMCP["@yoda/scheduler-mcp<br/>CreateSchedule, GetSchedules"]
         NotificationMCP["@yoda/notification-mcp<br/>SendEmail, SendSMS"]
@@ -358,28 +346,26 @@ graph TD
     
     %% Flow connections
     YodaUI -->|"{ prompt, sessionId }"| API
-    ListAgents --> AuthTool
-    AuthTool -->|"role_categories: ['csr']"| ListAgents
+    ListAgents --> PortalAuthMCP
+    PortalAuthMCP -->|"role_categories: ['csr']"| ListAgents
     ListAgents -->|"filtered agents by role"| Workflow
     Goals -->|"agents with tailored behaviors"| ListAgents
-    SameTools --> BackendInfra
+    SameTools --> SupportMCP
     
     classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef yoda fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef auth fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
     classDef goals fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef backend fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    classDef support fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
     
     class Frontend frontend
     class YODA yoda
     class AuthMCP auth
     class Goals goals
-    class BackendInfra backend
+    class SupportMCP support
 ```
 
-**Role-Specific Agent Behavior Example:**
-
-Each role category (client, csr, ops, sales) has dedicated agent goals with different conversation styles for the same underlying tools. Goal teams manually write `example_conversation_history` to define agent behavior:
+Each user role (client, csr, ops, sales) is mapped to a dedicated agent goal with a tailored conversation style, even when using the same underlying tools. Goal teams define these behaviors by writing the `example_conversation_history` for each agent:
 
 ```python
 # Goal team defines role-specific agent behavior
@@ -406,11 +392,9 @@ goal_client_order_status = AgentGoal(
 
 ---
 
-## **Goal-Oriented Backend Tools in Action**
+## **Support Backend MCP Servers in Action**
 
-Goal-oriented backend tools provide universal infrastructure capabilities that any business MCP server can use. These tools manage persistent, stateful operations while remaining platform-agnostic and composable across all business domains.
-
-Business tools from different domains (finance, HR, customer service) can use the same goal-oriented backend infrastructure:
+Support backend MCP servers are used by business MCP servers from any domain (finance, HR, customer service) to access shared infrastructure features:
 
 - **Alerts:** `await alerts_mcp.create_user_alert(condition="BTC < $50000")`
 - **Scheduling:** `await scheduler_mcp.create_schedule(action="process_payroll", condition="bi_weekly")`
