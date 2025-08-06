@@ -345,6 +345,4 @@ Add notification area above the chat interface.
 }
 ```
 
-**Status Types:**
-- **Alerts:** `active`, `triggered`, `dismissed`
-- **Schedules:** `pending`, `executed`, `failed`
+
