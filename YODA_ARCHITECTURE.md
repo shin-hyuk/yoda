@@ -145,61 +145,13 @@ Retrieves detailed customer information from the CRM system. Returns customer pr
    Prepare a structured MCP server/tool requirement document (as shown in the documentation standards above).
 
 2. **Tool Team: Develop & Document**  
-   Implement the MCP server and tools based on the requirement, and document finalized response schemas and examples.
+   Implement the MCP server and tools based on the requirement, update shared documentation with finalized response schemas and examples, then publish to NPM.
 
-3. **Tool Team: Publish & Notify**  
-   Publish the MCP server to NPM and notify the goal team, sharing the documentation.
-
-4. **Goal Team: Integrate & Design**  
-   Add the server definition, reference it in goal files, and use the documentation to write accurate `example_conversation_history` for agent behavior.
-
-### Tool Development Workflow
-
-```bash
-# 1. Implement MCP server and tools based on requirement
-{
-  "name": "GetCustomerDetails",
-  "description": "Retrieve customer information from CRM",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "customer_id": {"type": "string", "description": "Customer identifier"}
-    },
-    "required": ["customer_id"]
-  }
-}
-
-# 2. Update shared documentation with finalized response schema and examples
-
-# 3. Publish to NPM and notify goal team
-npm publish @{company}/{customer-mcp-server}
-```
-
-### Goal Development Workflow
+3. **Goal Team: Integrate & Design**  
+   Add the server definition to the orchestrator, reference it in goal files, and use the documentation to write accurate `example_conversation_history` for agent behavior.
 
 ```python
-# 1. Add MCP server definition to shared/mcp_config.py
-def get_customer_mcp_server_definition(included_tools: list[str]) -> MCPServerDefinition:
-    return MCPServerDefinition(
-        name="customer-mcp",
-        command="npx",
-        args=["-y", "@{company}/{customer-mcp-server}"],
-        included_tools=included_tools,
-    )
-
-# 2. Design goals using MCP server reference and documentation
-goal_customer_assistant = AgentGoal(
-    agent_name="Customer Assistant",
-    agent_friendly_description="Help with customer information and support",
-    starter_prompt="Hi! I can help with customer inquiries...",
-    
-    # Reference MCP server (tools auto-discovered at runtime)
-    mcp_server_definition=get_customer_mcp_server_definition(
-        included_tools=["GetCustomerDetails"]
-    ),
-)
-
-# With documentation, goal teams write accurate tool_result:
+# Goal team uses finalized documentation to write accurate tool responses:
 example_conversation_history="\n ".join([
     "user_confirmed_tool_run: <user clicks confirm on GetCustomerDetails tool>",
     "tool_result: { 'customer_id': 'CUST_123', 'name': 'John Smith', 'email': 'john@example.com', 'status': 'active' }",  # From tool docs
