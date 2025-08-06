@@ -100,24 +100,7 @@ YODA's architecture relies on seamless collaboration between two specialized tea
 
 While the MCP protocol only requires servers to define an `inputSchema` for each tool, this forces goal teams to guess tool response formats. YODA addresses this by establishing documentation standards: tool teams are encouraged to provide separate documentation with `responseSchema` and `examples`, giving goal teams complete input and output details for accurate agent design without breaking MCP protocol compatibility.
 
-**Standard MCP Server (Protocol Compliant):**
-
-```python
-# MCP Server follows standard protocol - only inputSchema required
-{
-  "name": "ValidateJWT",
-  "description": "Validate user JWT token and extract permissions",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "jwt_token": {"type": "string", "description": "User JWT token"}
-    },
-    "required": ["jwt_token"]
-  }
-}
-```
-
-**Separate Tool Documentation (Provided by Tool Team):**
+**Tool Documentation (Provided by Tool Team):**
 
 ```markdown
 # @company/auth-mcp-server Documentation
@@ -125,21 +108,19 @@ While the MCP protocol only requires servers to define an `inputSchema` for each
 ## ValidateJWT Tool
 
 **Response Schema:**
-```json
 {
   "type": "object", 
   "properties": {
     "valid": {"type": "boolean"},
     "user_id": {"type": "string"},
-    "scopes": {"type": "array", "items": {"type": "string"}},
+    "scopes": {"type": "array", "items": {"type": "string"}"},
     "expires_at": {"type": "string", "format": "date-time"}
   }
 }
-```
 
 **Examples:**
-- Success: `{"valid": true, "user_id": "user_123", "scopes": ["finance:read", "hr:write"], "expires_at": "2024-01-15T10:30:00Z"}`
-- Error: `{"valid": false, "error": "Token expired"}`
+- Success: {"valid": true, "user_id": "user_123", "scopes": ["finance:read", "hr:write"], "expires_at": "2024-01-15T10:30:00Z"}
+- Error: {"valid": false, "error": "Token expired"}
 ```
 
 ---
