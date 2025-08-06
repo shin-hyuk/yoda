@@ -293,75 +293,20 @@ graph TD
 
 Platform-specific authentication servers that YODA Orchestrator uses to handle JWT complexity and map to standardized role categories:
 
-```python
-# Different auth servers for different deployment platforms
-class YODAOrchestrator:
-    async def authenticate_user(self, session_id, platform):
-        if platform == "portal":
-            auth_result = await portal_auth_mcp.authenticate_user(session_id)
-        elif platform == "mobile_app":
-            auth_result = await app_auth_mcp.authenticate_user(session_id) 
-        elif platform == "enterprise":
-            auth_result = await enterprise_auth_mcp.authenticate_user(session_id)
-        
-        # All return standardized format: {"user_id": "...", "role_categories": ["csr"]}
-        return auth_result
+- **@portal/auth-mcp:** Maps portal JWT to clean role categories
+- **@app/auth-mcp:** Maps mobile app JWT to clean role categories  
+- **@enterprise/auth-mcp:** Maps enterprise SSO to clean role categories
 
-# @portal/auth-mcp handles portal-specific JWT
-async def authenticate_user(session_id):
-    portal_jwt = await portal_system.validate_session(session_id)
-    # Complex portal JWT → clean roles
-    role_categories = map_portal_roles(portal_jwt["user_type"], portal_jwt["permissions"])
-    return {"user_id": portal_jwt["user_id"], "role_categories": role_categories}
-
-# @enterprise/auth-mcp handles enterprise SSO  
-async def authenticate_user(session_id):
-    sso_jwt = await enterprise_sso.validate_session(session_id)
-    # Complex enterprise JWT → clean roles
-    role_categories = map_enterprise_roles(sso_jwt["roles"], sso_jwt["department"])
-    return {"user_id": sso_jwt["employee_id"], "role_categories": role_categories}
-```
+All return standardized format: `{"user_id": "...", "role_categories": ["csr"]}`
 
 ### **Goal-Oriented Backend Tools**
 
-Universal infrastructure tools that any business MCP server can use for common functionality:
+Universal infrastructure tools that any business MCP server can use:
 
-```python
-# @company/finance-mcp-server using goal-oriented backend tools
-class FinanceMCP:
-    def __init__(self):
-        # Goal-oriented backend tools - available to any business tool
-        self.alerts = MCPClient("@yoda/alerts-mcp")
-        self.scheduler = MCPClient("@yoda/scheduler-mcp") 
-        self.notifications = MCPClient("@yoda/notification-mcp")
-        self.analytics = MCPClient("@yoda/analytics-mcp")
-    
-    async def transfer_money(self, from_account, to_account, amount, user_id):
-        # Business logic
-        transfer = await self.execute_transfer(from_account, to_account, amount)
-        
-        # Use goal-oriented backend infrastructure
-        if amount > 10000:
-            await self.alerts.create_user_alert(
-                user_id=user_id,
-                condition=f"Large transfer of ${amount:,.2f} completed",
-                alert_type="high_value_transaction"
-            )
-        
-        await self.notifications.send_email(
-            user_id=user_id,
-            template="transfer_confirmation", 
-            data={"amount": amount, "to_account": to_account}
-        )
-        
-        await self.analytics.track_event(
-            user_id=user_id,
-            event="money_transfer",
-            metadata={"amount": amount, "type": "internal"}
-        )
-        
-        return {"transfer_id": transfer.id, "status": "completed"}
-```
+- **@yoda/alerts-mcp:** CreateAlert, GetUserAlerts, UpdateAlert
+- **@yoda/scheduler-mcp:** CreateSchedule, GetSchedules, ExecuteSchedule
+- **@yoda/notification-mcp:** SendEmail, SendSMS, SendPush
+- **@yoda/analytics-mcp:** TrackEvent, GetMetrics, GenerateReport
 
 ---
 
@@ -432,88 +377,27 @@ graph TD
     class BackendInfra backend
 ```
 
-**Benefits of Role-Based Category Approach:**
+**Role-Specific Agent Behavior Example:**
 
-- **🎭 Role-Specific Agent Behaviors:** Same tools with tailored conversation styles for different user types
-- **🏢 Enterprise JWT Abstraction:** @entity/auth-mcp handles complex enterprise authentication mapping
-- **🔍 Scope-Aware Discovery:** Users only see agents appropriate for their role
-- **🧩 Backend Tool Freedom:** Tool teams can freely use all infrastructure MCP tools
-- **⚡ Enhanced ListAgents:** Single tool modification provides complete role-based filtering
+Each role category (client, csr, ops, sales) has dedicated agent goals with different conversation styles for the same underlying tools. Goal teams manually write `example_conversation_history` to define agent behavior:
 
-**Example Flow:**
-
-**1. Enterprise JWT → Role Categories:**
-```json
-// @entity/auth-mcp receives complex enterprise JWT
-{
-  "session_id": "sess_abc123"
-}
-
-// Complex enterprise JWT from company auth system
-{
-  "user_id": "emp_456",
-  "roles": ["customer_service", "support_tier_2"], 
-  "department": "customer_success",
-  "permissions": ["view_customer_data", "modify_orders"],
-  "groups": ["west_coast_team", "senior_agents"]
-}
-
-// @entity/auth-mcp maps to clean role categories
-{
-  "user_id": "emp_456",
-  "role_categories": ["csr"],  // Clean, simple role mapping
-  "session_expires": "2024-01-15T10:30:00Z"
-}
-```
-
-**2. Scope-Aware Agent Discovery:**
-```json
-// Enhanced listAgents with role filtering
-{
-  "session_id": "sess_abc123",
-  "user_role_categories": ["csr"]
-}
-
-// Response: Only agents appropriate for CSR role
-{
-  "agents": [
-    {
-      "agent_name": "Customer Support Assistant",
-      "goal_id": "goal_csr_order_status", 
-      "agent_description": "Professional order status checking with technical details",
-      "conversation_style": "direct_professional"
-    },
-    {
-      "agent_name": "Account Management Helper", 
-      "goal_id": "goal_csr_account_mgmt",
-      "agent_description": "Manage customer accounts with administrative tools",
-      "conversation_style": "business_focused"
-    }
-  ]
-}
-```
-
-**3. Role-Specific Agent Behavior:**
 ```python
-# csr.py - Professional, direct style
+# Goal team defines role-specific agent behavior
 goal_csr_order_status = AgentGoal(
     category_tag="csr",
     example_conversation_history="\n ".join([
         "user: Order status for 102",
-        "agent: Order ID: 102. Status: Shipped. Tracking: 039813852990618. ETA: April 30, 2025.",
-        "user: Any delivery issues?", 
-        "agent: No delivery exceptions. Package in transit. Last scan: Phoenix, AZ."
+        "agent: Order ID: 102. Status: Shipped. Tracking: 039813852990618. ETA: April 30, 2025."
     ])
 )
 
-# client.py - Friendly, conversational style  
 goal_client_order_status = AgentGoal(
-    category_tag="client",
+    category_tag="client", 
     example_conversation_history="\n ".join([
         "user: Hi, how's my order doing?",
         "agent: Hi there! I'd be happy to check on your order. What's your order number?",
         "user: 102",
-        "agent: Great news! Your order shipped and is on its way! 😊 It should arrive by April 30th."
+        "agent: Great news! Your order shipped and is on its way! 😊"
     ])
 )
 ```
@@ -526,146 +410,11 @@ goal_client_order_status = AgentGoal(
 
 Goal-oriented backend tools provide universal infrastructure capabilities that any business MCP server can use. These tools manage persistent, stateful operations while remaining platform-agnostic and composable across all business domains.
 
-### **@yoda/alerts-mcp-server**
+Business tools from different domains (finance, HR, customer service) can use the same goal-oriented backend infrastructure:
 
-Universal alerting infrastructure that any business tool can use for user notifications:
-
-```python
-# Any business tool can create sophisticated alerts
-await alerts_mcp.create_user_alert(
-    user_id="user_456",
-    condition="BTC price drops below $50,000 AND portfolio loss > 5%",
-    alert_type="financial_risk",
-    priority="high"
-)
-
-# Universal alert format across all business domains
-{
-  "alert_id": "alert_123",
-  "user_id": "user_456", 
-  "condition": "BTC < $50000 AND portfolio_loss > 0.05",
-  "status": "active",
-  "created_at": "2024-01-10T09:00:00Z",
-  "triggered_at": null
-}
-```
-
-### **@yoda/scheduler-mcp-server**
-
-Universal scheduling infrastructure for time-based and conditional automation:
-
-```python
-# Any business tool can schedule actions
-await scheduler_mcp.create_schedule(
-    user_id="user_456",
-    action="transfer_to_savings",
-    condition="monthly",
-    action_params={"amount": 500, "target_account": "savings_001"}
-)
-
-# Universal schedule format across all business domains
-{
-  "schedule_id": "schedule_789",
-  "user_id": "user_456",
-  "action": "transfer_to_savings", 
-  "condition": "monthly",
-  "status": "pending",
-  "next_execution": "2024-02-01T00:00:00Z",
-  "action_params": {"amount": 500, "target_account": "savings_001"}
-}
-```
-
-### **@yoda/notification-mcp-server**
-
-Universal notification infrastructure for multi-channel communications:
-
-```python
-# Any business tool can send notifications
-await notification_mcp.send_email(
-    user_id="user_456",
-    template="payment_confirmation",
-    data={"amount": "$1,500", "account": "checking"}
-)
-
-await notification_mcp.send_sms(
-    user_id="user_456", 
-    message="Your payment of $1,500 has been processed successfully."
-)
-
-await notification_mcp.send_push_notification(
-    user_id="user_456",
-    title="Payment Complete",
-    body="Your transfer is complete. Check your account for details."
-)
-```
-
-### **@yoda/analytics-mcp-server**
-
-Universal analytics infrastructure for business intelligence and monitoring:
-
-```python
-# Any business tool can track events and metrics
-await analytics_mcp.track_event(
-    user_id="user_456",
-    event="money_transfer",
-    metadata={
-        "amount": 1500,
-        "type": "internal",
-        "from_account": "checking",
-        "to_account": "savings"
-    }
-)
-
-await analytics_mcp.track_metric(
-    metric_name="daily_transaction_volume",
-    value=1500,
-    tags={"user_type": "premium", "region": "west_coast"}
-)
-```
-
-### **Cross-Domain Integration Example**
-
-Business tools from different domains using the same goal-oriented backend infrastructure:
-
-```python
-# HR tool using multiple goal-oriented backend tools
-class HRMCP:
-    def __init__(self):
-        self.scheduler = MCPClient("@yoda/scheduler-mcp")
-        self.alerts = MCPClient("@yoda/alerts-mcp")
-        self.notifications = MCPClient("@yoda/notification-mcp")
-        self.analytics = MCPClient("@yoda/analytics-mcp")
-    
-    async def setup_payroll_automation(self, employee_id, salary_amount):
-        # Schedule recurring payroll using universal scheduler
-        await self.scheduler.create_schedule(
-            user_id=employee_id,
-            action="process_payroll",
-            condition="bi_weekly",
-            action_params={"amount": salary_amount, "employee_id": employee_id}
-        )
-        
-        # Create alert for payroll failures using universal alerts
-        await self.alerts.create_user_alert(
-            user_id=employee_id,
-            condition="payroll_failed OR insufficient_funds",
-            alert_type="payroll_issue",
-            priority="critical"
-        )
-        
-        # Send confirmation using universal notifications
-        await self.notifications.send_email(
-            user_id=employee_id,
-            template="payroll_setup_confirmation",
-            data={"amount": salary_amount, "frequency": "bi_weekly"}
-        )
-        
-        # Track setup event using universal analytics
-        await self.analytics.track_event(
-            user_id=employee_id,
-            event="payroll_automation_setup",
-            metadata={"salary_amount": salary_amount}
-        )
-```
+- **Alerts:** `await alerts_mcp.create_user_alert(condition="BTC < $50000")`
+- **Scheduling:** `await scheduler_mcp.create_schedule(action="process_payroll", condition="bi_weekly")`
+- **Notifications:** `await notification_mcp.send_email(template="confirmation")`
+- **Analytics:** `await analytics_mcp.track_event(event="money_transfer")`
 
 
