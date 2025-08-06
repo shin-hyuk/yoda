@@ -287,11 +287,16 @@ graph TD
     class GoalMCP goalMCP
 ```
 
-
-
 ### **Orchestrator-Level MCP Servers**
 
 Orchestrator-level MCP servers are only used by the YODA orchestrator for internal backend operations. Examples: **@portal/auth-mcp** (maps portal JWTs to user roles), **@app/auth-mcp** (maps mobile app JWTs to user roles), **@enterprise/auth-mcp** (maps enterprise SSO to user roles). All return a standardized user context for downstream use.
+
+**Example:**
+```python
+# Orchestrator gets user roles from the platform-specific auth MCP server
+user_context = await portal_auth_mcp.authenticate_user(session_id)
+# user_context: {"user_id": "...", "role_categories": ["csr"]}
+```
 
 ### **Support Backend MCP Servers**
 
