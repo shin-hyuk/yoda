@@ -233,7 +233,7 @@ graph TD
 
 ## **Backend Infrastructure Tools**
 
-YODA's architecture separates **goal-oriented tools** (business logic for user interactions) from **backend infrastructure tools**. Backend infrastructure tools are divided into two distinct types: **orchestrator-level tools** that handle platform-specific authentication and user scoping across different deployment contexts (portal, app, enterprise), and **goal-oriented backend tools** that provide universal functionality like alerts, scheduling, and notifications that any business tool can consume regardless of platform.
+YODA's architecture separates **goal-oriented tools** (business logic for user interactions) from **backend infrastructure tools**. Backend infrastructure tools are divided into two distinct types: **orchestrator-level tools** that are used internally by YODA orchestrator to get user roles from specific platforms (portal, app, enterprise), and **goal-oriented backend tools** that are used by external MCP servers to provide universal functionality like alerts, scheduling, and notifications.
 
 ### **Architecture Pattern: Two-Tier Backend Infrastructure**
 
@@ -310,9 +310,9 @@ Universal infrastructure tools that any business MCP server can use:
 
 ---
 
-## **User Management & Authentication Flow**
+## **Platform-Specific Auth Tools**
 
-YODA implements scope-based agent categories where each user role (client, csr, ops, sales) has dedicated agent goals with tailored behaviors and conversation styles. The system uses a single authentication MCP server to handle JWT complexity and map enterprise authentication to clean role categories, with the `listAgents` tool providing scope-aware agent discovery.
+YODA implements scope-based agent categories where each user role (client, csr, ops, sales) has dedicated agent goals with tailored behaviors and conversation styles. The system uses the appropriate platform authentication MCP server to handle JWT complexity and map enterprise authentication to clean role categories, with the `listAgents` tool providing scope-aware agent discovery.
 
 ```mermaid
 graph TD
