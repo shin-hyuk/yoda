@@ -231,7 +231,92 @@ graph TD
 
 ---
 
-## **Centralized User Management Flow**
+## **Backend Infrastructure Tools**
+
+YODA's architecture separates **goal-oriented tools** (business logic for customer interactions) from **backend infrastructure tools** (system capabilities like authentication, permissions, alerts). Backend tools are implemented as MCP servers that goal-oriented tools consume, creating a composable microservices architecture where any business tool can leverage system capabilities.
+
+### **Architecture Pattern: Infrastructure as MCP Tools**
+
+```mermaid
+graph TD
+    subgraph "Goal-Oriented Tools" 
+        CustomerMCP["@company/customer-mcp<br/>GetCustomerDetails<br/>UpdateCustomer"]
+        FinanceMCP["@company/finance-mcp<br/>TransferMoney<br/>GetBalance"]
+        HRMCP["@company/hr-mcp<br/>BookPTO<br/>GetPayroll"]
+    end
+    
+    subgraph "Backend Infrastructure Tools"
+        UserMgmtMCP["@yoda/user-management-mcp<br/>AuthenticateUser<br/>ValidatePermissions"]
+        AlertsMCP["@yoda/alerts-mcp<br/>CreateAlert<br/>GetUserAlerts"]
+        ScheduleMCP["@yoda/scheduler-mcp<br/>CreateSchedule<br/>GetSchedules"]
+        NotificationMCP["@yoda/notification-mcp<br/>SendEmail<br/>SendSMS"]
+    end
+    
+    CustomerMCP --> UserMgmtMCP
+    CustomerMCP --> AlertsMCP
+    FinanceMCP --> UserMgmtMCP
+    FinanceMCP --> AlertsMCP
+    FinanceMCP --> NotificationMCP
+    HRMCP --> UserMgmtMCP
+    HRMCP --> ScheduleMCP
+    
+    UserMgmtMCP --> Database["PostgreSQL<br/>users, sessions, permissions"]
+    AlertsMCP --> Database
+    ScheduleMCP --> Database
+```
+
+### **Benefits of Backend Tool Architecture**
+
+- **🔧 Composable Microservices:** Any goal-oriented tool can use any backend capability
+- **🎯 Separation of Concerns:** Business logic separate from infrastructure logic
+- **♻️ Reusability:** Backend tools shared across all business domains
+- **🧪 Testability:** Each infrastructure capability independently testable
+- **📈 Scalability:** Backend tools can be scaled independently based on usage
+
+### **Example: Rich Business Tool Using Backend Infrastructure**
+
+```python
+# @company/finance-mcp-server leveraging backend tools
+class FinanceMCP:
+    def __init__(self):
+        self.user_mgmt = MCPClient("@yoda/user-management-mcp")
+        self.alerts = MCPClient("@yoda/alerts-mcp")
+        self.notifications = MCPClient("@yoda/notification-mcp")
+    
+    async def transfer_money(self, from_account, to_account, amount, user_id):
+        # 1. Validate permissions using backend tool
+        has_permission = await self.user_mgmt.validate_permissions(
+            user_id=user_id,
+            required_scopes=["finance:transfer"]
+        )
+        
+        if not has_permission:
+            return {"error": "Insufficient permissions"}
+        
+        # 2. Business logic
+        transfer = await self.execute_transfer(from_account, to_account, amount)
+        
+        # 3. Create alert using backend tool
+        if amount > 10000:
+            await self.alerts.create_user_alert(
+                user_id=user_id,
+                condition=f"Large transfer of ${amount:,.2f} completed",
+                alert_type="high_value_transaction"
+            )
+        
+        # 4. Send notification using backend tool
+        await self.notifications.send_email(
+            user_id=user_id,
+            template="transfer_confirmation",
+            data={"amount": amount, "to_account": to_account}
+        )
+        
+        return {"transfer_id": transfer.id, "status": "completed"}
+```
+
+---
+
+## **User Management & Authentication Flow**
 
 YODA uses a centralized User Management MCP Server to handle authentication, user sessions, permission validation, and tool permission registry. This approach keeps business MCP tools focused on business logic while ensuring secure, user-scoped operations through a single security layer. Goal teams simply specify which tools to include—permissions are automatically discovered and validated.
 
@@ -375,40 +460,84 @@ graph TD
 
 ---
 
-## **Persistent Alerts & Schedules**
+## **Alerts & Scheduling Backend Tools**
 
-YODA manages persistent alerts and schedules as stateful JSON feeds, linked to user JWT tokens and stored within the orchestration engine. This design ensures user-specific automation and notifications are reliably maintained across all integrated business tools.
+The alerts and scheduling system exemplifies YODA's backend infrastructure pattern: specialized MCP servers that provide persistent, user-scoped capabilities to any goal-oriented tool. These backend tools manage stateful operations independently while remaining composable across all business domains.
 
-**Database Extension:**
-Add alerts and schedules tables to existing PostgreSQL (Temporal persistence database):
+### **Alert Backend Architecture**
 
-```sql
--- User alerts/schedules identified by JWT token
-alerts_table: user_id, condition, status (active/triggered/dismissed), created_at
-schedules_table: user_id, action, condition, status (pending/executed/failed), created_at
+**@yoda/alerts-mcp-server** provides persistent user alert capabilities:
+
+```python
+# Goal-oriented tools can create sophisticated alerts
+await alerts_mcp.create_user_alert(
+    user_id="user_456",
+    condition="BTC price drops below $50,000 AND portfolio loss > 5%",
+    alert_type="financial_risk",
+    priority="high"
+)
+
+# Backend manages persistent storage and monitoring
+{
+  "alert_id": "alert_123",
+  "user_id": "user_456", 
+  "condition": "BTC < $50000 AND portfolio_loss > 0.05",
+  "status": "active",
+  "created_at": "2024-01-10T09:00:00Z",
+  "triggered_at": null
+}
 ```
 
-**Frontend Enhancement:**
-Add notification area above the chat interface.
+### **Scheduling Backend Architecture**
 
-**JSON Feed Structure:**
+**@yoda/scheduler-mcp-server** handles time-based and conditional automation:
 
-```json
-// Alerts table feed
+```python
+# Any business tool can schedule actions
+await scheduler_mcp.create_schedule(
+    user_id="user_456",
+    action="transfer_to_savings",
+    condition="monthly",
+    action_params={"amount": 500, "target_account": "savings_001"}
+)
+
+# Backend manages execution timing and state
 {
-  "alerts": [
-    {"condition": "BTC drops 5%", "status": "active", "created_at": "2024-01-15"},
-    {"condition": "Unpaid fee $50", "status": "triggered", "created_at": "2024-01-10"}
-  ]
+  "schedule_id": "schedule_789",
+  "user_id": "user_456",
+  "action": "transfer_to_savings", 
+  "condition": "monthly",
+  "status": "pending",
+  "next_execution": "2024-02-01T00:00:00Z",
+  "action_params": {"amount": 500, "target_account": "savings_001"}
 }
+```
 
-// Schedules table feed  
-{
-  "schedules": [
-    {"action": "Sell BTC", "condition": "BTC rises 5%", "status": "pending", "created_at": "2024-01-15"},
-    {"action": "Monthly report", "condition": "1st of month", "status": "executed", "created_at": "2024-01-01"}
-  ]
-}
+### **Cross-Domain Integration Example**
+
+```python
+# HR tool creating finance-related schedule
+class HRMCP:
+    async def setup_payroll_automation(self, employee_id, salary_amount):
+        # Create recurring payroll schedule using backend tool
+        await self.scheduler.create_schedule(
+            user_id=employee_id,
+            action="process_payroll",
+            condition="bi_weekly", 
+            action_params={
+                "amount": salary_amount,
+                "employee_id": employee_id,
+                "account": "payroll_account"
+            }
+        )
+        
+        # Create alert for payroll failures using backend tool
+        await self.alerts.create_user_alert(
+            user_id=employee_id,
+            condition="payroll_failed OR insufficient_funds",
+            alert_type="payroll_issue",
+            priority="critical"
+        )
 ```
 
 
