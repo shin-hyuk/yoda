@@ -139,7 +139,7 @@ Retrieves detailed customer information from the CRM system. Returns customer pr
 
 ---
 
-## Parallel Team Workflow
+## Streamlined Team Workflow
 
 1. **Goal Team: Define & Send Requirement**  
    Prepare a structured MCP server/tool requirement document (as shown in the documentation standards above).
@@ -156,76 +156,54 @@ Retrieves detailed customer information from the CRM system. Returns customer pr
 ### Tool Development Workflow
 
 ```bash
-# 1. Build MCP Server following MCP protocol standard
-# Node.js, Python, Go, etc. - any language that can create NPM executable
-
-# 2. Develop tools with correct schema (automatically validated)
+# 1. Implement MCP server and tools based on requirement
 {
-  "name": "GetCustomerOrders",
-  "description": "Retrieve customer order history",
+  "name": "GetCustomerDetails",
+  "description": "Retrieve customer information from CRM",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "customer_id": {"type": "string", "description": "Customer identifier"},
-      "date_range": {"type": "string", "description": "Date range filter"}
+      "customer_id": {"type": "string", "description": "Customer identifier"}
     },
     "required": ["customer_id"]
   }
 }
 
-# 3. Publish to NPM
-npm publish @{company}/{mcp-server-name}
+# 2. Update shared documentation with finalized response schema and examples
 
-# 4. Notify goal team
-"Hey, we added @{company}/{mcp-server-name} with order management and customer tools"
+# 3. Publish to NPM and notify goal team
+npm publish @{company}/{customer-mcp-server}
 ```
 
 ### Goal Development Workflow
 
 ```python
-# Step 1: Add MCP server definition to shared/mcp_config.py
-def get_business_mcp_server_definition(included_tools: list[str]) -> MCPServerDefinition:
+# 1. Add MCP server definition to shared/mcp_config.py
+def get_customer_mcp_server_definition(included_tools: list[str]) -> MCPServerDefinition:
     return MCPServerDefinition(
-        name="business-mcp",
+        name="customer-mcp",
         command="npx",
-        args=["-y", "@{company}/{mcp-server-name}"],
+        args=["-y", "@{company}/{customer-mcp-server}"],
         included_tools=included_tools,
     )
 
-# Step 2: Tools are automatically discovered at runtime via mcp_list_tools
-# Returns schema like:
-{
-  "GetCustomerOrders": {
-    "name": "GetCustomerOrders",
-    "description": "Retrieve customer order history", 
-    "inputSchema": {
-      "properties": {
-        "customer_id": {"type": "string", "description": "Customer identifier"},
-        "date_range": {"type": "string", "description": "Date range filter"}
-      },
-      "required": ["customer_id"]
-    }
-  }
-}
-
-# Step 3: Design goals using MCP server reference and documentation
-# goals/{goal_name}.py - Focus on agent behavior and UX  
-goal_business_assistant = AgentGoal(
-    agent_name="Business Assistant",
-    agent_friendly_description="Help with customer orders and business operations",
-    starter_prompt="Hi! I can help with your business operations...",
+# 2. Design goals using MCP server reference and documentation
+goal_customer_assistant = AgentGoal(
+    agent_name="Customer Assistant",
+    agent_friendly_description="Help with customer information and support",
+    starter_prompt="Hi! I can help with customer inquiries...",
     
     # Reference MCP server (tools auto-discovered at runtime)
-    mcp_server_definition=get_business_mcp_server_definition(
-        included_tools=["GetCustomerOrders", "UpdateOrderStatus"]
+    mcp_server_definition=get_customer_mcp_server_definition(
+        included_tools=["GetCustomerDetails"]
     ),
 )
 
 # With documentation, goal teams write accurate tool_result:
 example_conversation_history="\n ".join([
-    "user_confirmed_tool_run: <user clicks confirm on ValidateJWT tool>",
-    "tool_result: { 'valid': true, 'user_id': 'user_123', 'scopes': ['finance:read', 'hr:write'] }",  # From tool docs
-    "agent: Your token is valid! You have finance and HR access."
+    "user_confirmed_tool_run: <user clicks confirm on GetCustomerDetails tool>",
+    "tool_result: { 'customer_id': 'CUST_123', 'name': 'John Smith', 'email': 'john@example.com', 'status': 'active' }",  # From tool docs
+    "agent: Found customer John Smith (john@example.com) - account is active."
 ])
 ```
 
