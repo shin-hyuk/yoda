@@ -22,14 +22,14 @@
 
 ## Overview
 
-YODA is a Temporal-powered AI agent system for integrating external business tools via Model Context Protocol (MCP) servers. This document covers MCP integration, team workflows, JWT authentication, agent orchestration, and persistent alert/schedule systems.
+YODA is a Temporal-powered AI agent system for integrating external business tools via Model Context Protocol (MCP) servers. This document covers LLM-driven agent orchestration, team workflows, JWT authentication, MCP integration, and persistent alert/schedule systems.
 
 ### Architectural Traits
 
 - **[MCP Servers for Tools](#mcp-servers-for-tools):** Modular tools, auto-discovered via NPM
 - **[Parallel Team Workflow](#parallel-team-workflow):** Tool and goal teams work in parallel with minimal coordination
 - **[Goal Switching Architecture](#goal-switching-architecture):** Users can seamlessly switch between agent personas and goals
-- **[Enhanced MCP Tool Discovery](#enhanced-mcp-tool-discovery):** Complete input/output schemas and examples for every tool
+- **[MCP Tool Documentation Standards](#mcp-tool-documentation-standards):** Standardized documentation for tool response schemas and examples alongside standard MCP protocol
 - **[JWT-Based Authorization Flow](#jwt-based-authorization-flow):** User access is securely managed with JWT tokens across all tools
 - **[Persistent Alerts & Schedules](#persistent-alerts--schedules):** User-specific alerts and schedules are managed as stateful JSON feeds within the orchestrator
 
@@ -43,8 +43,8 @@ YODA's architecture is modular by design: YODA itself acts as the orchestrator (
 
 ### Tool Registration & Deployment
 
-1. Publish MCP server via NPM
-2. Add server definition
+1. Publish MCP server to NPM
+2. Register server endpoint in the orchestrator
 3. Reference server in goal files
 4. Tools are auto-discovered at runtime
 
@@ -94,49 +94,71 @@ graph TB
     class Infrastructure infra
 ```
 
+## **MCP Tool Documentation Standards**
+
+YODA's architecture relies on seamless collaboration between two specialized teams: **tool teams** who build and maintain MCP servers with business logic, and **goal teams** who design agent experiences and user interactions. To streamline this collaboration, documentation standards are applied so that the information exchanged between teams follows expected formats throughout the entire development process.
+
+While the MCP protocol only requires servers to define an `inputSchema` for each tool, this forces goal teams to guess tool response formats. YODA addresses this by establishing documentation standards: tool teams are encouraged to provide separate documentation with `responseSchema` and `examples`, giving goal teams complete input and output details for accurate agent design without breaking MCP protocol compatibility.
+
+**Standard MCP Server (Protocol Compliant):**
+
+```python
+# MCP Server follows standard protocol - only inputSchema required
+{
+  "name": "ValidateJWT",
+  "description": "Validate user JWT token and extract permissions",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "jwt_token": {"type": "string", "description": "User JWT token"}
+    },
+    "required": ["jwt_token"]
+  }
+}
+```
+
+**Separate Tool Documentation (Provided by Tool Team):**
+
+```markdown
+# @company/auth-mcp-server Documentation
+
+## ValidateJWT Tool
+
+**Response Schema:**
+```json
+{
+  "type": "object", 
+  "properties": {
+    "valid": {"type": "boolean"},
+    "user_id": {"type": "string"},
+    "scopes": {"type": "array", "items": {"type": "string"}},
+    "expires_at": {"type": "string", "format": "date-time"}
+  }
+}
+```
+
+**Examples:**
+- Success: `{"valid": true, "user_id": "user_123", "scopes": ["finance:read", "hr:write"], "expires_at": "2024-01-15T10:30:00Z"}`
+- Error: `{"valid": false, "error": "Token expired"}`
+```
+
+---
+
 ## Parallel Team Workflow
 
 Tool teams build and maintain MCP servers; goal teams design agent experiences. Tools are automatically discovered—adding a new tool is as simple as registering a new MCP server endpoint, with no redeployment or deep integration required.
 
-1. **Goal Team: Define & Send Requirement**
-   - The goal team prepares a structured MCP server/tool requirement (see template below).
-2. **Tool Team: Develop MCP Server**
-   - The tool team implements the server and tools based on the requirement.
-3. **Tool Team: Publish & Notify**
-   - The tool team publishes the MCP server to NPM and notifies the goal team.
-4. **Goal Team: Integrate & Activate**
-   - The goal team adds the server definition, references it in goal files, and tools are auto-discovered at runtime.
+1. **Goal Team: Define & Send Requirement**  
+   Prepare a structured MCP server/tool requirement document (as shown in the documentation standards above).
 
-### Example: MCP Server/Tool Requirement Template
+2. **Tool Team: Develop & Document**  
+   Implement the MCP server and tools based on the requirement, and document finalized response schemas and examples.
 
-```yaml
-# Example MCP Tool Requirement (to be sent from goal team to tool team)
-use_case: "Enable order tracking for customers"
-tools:
-  - name: "TrackOrder"
-    description: "Retrieve the current status of a customer order"
-    inputSchema:
-      type: object
-      properties:
-        order_id:
-          type: string
-          description: "Unique identifier for the order"
-      required: ["order_id"]
-    responseSchema:
-      type: object
-      properties:
-        status:
-          type: string
-          description: "Current status of the order"
-        estimated_delivery:
-          type: string
-          format: date
-          description: "Estimated delivery date"
-      required: ["status"]
-    examples:
-      request: { "order_id": "ORD12345" }
-      response: { "status": "Shipped", "estimated_delivery": "2024-05-10" }
-```
+3. **Tool Team: Publish & Notify**  
+   Publish the MCP server to NPM and notify the goal team, sharing the documentation.
+
+4. **Goal Team: Integrate & Design**  
+   Add the server definition, reference it in goal files, and use the documentation to write accurate `example_conversation_history` for agent behavior.
 
 ### Tool Development Workflow
 
@@ -193,7 +215,7 @@ def get_business_mcp_server_definition(included_tools: list[str]) -> MCPServerDe
   }
 }
 
-# Step 3: Design goals using MCP server reference
+# Step 3: Design goals using MCP server reference and documentation
 # goals/{goal_name}.py - Focus on agent behavior and UX  
 goal_business_assistant = AgentGoal(
     agent_name="Business Assistant",
@@ -205,6 +227,13 @@ goal_business_assistant = AgentGoal(
         included_tools=["GetCustomerOrders", "UpdateOrderStatus"]
     ),
 )
+
+# With documentation, goal teams write accurate tool_result:
+example_conversation_history="\n ".join([
+    "user_confirmed_tool_run: <user clicks confirm on ValidateJWT tool>",
+    "tool_result: { 'valid': true, 'user_id': 'user_123', 'scopes': ['finance:read', 'hr:write'] }",  # From tool docs
+    "agent: Your token is valid! You have finance and HR access."
+])
 ```
 
 ---
@@ -273,63 +302,6 @@ graph TD
     class Route1 route1
     class Route2 route2
     class AgentSelection agentHub
-```
-
----
-
-## **Enhanced MCP Tool Discovery**
-
-The MCP protocol requires servers to define an `inputSchema` for each tool, which forces goal teams to guess tool response formats. YODA enhances this by extending the MCP server contract: MCP servers must also provide a `responseSchema` and `examples`, ensuring goal teams have complete input and output details for accurate agent design.
-
-**Enhanced MCP Schema:**
-
-```python
-# MCP Server: @{company}/{auth-mcp-server}
-{
-  "name": "ValidateJWT",
-  "description": "Validate user JWT token and extract permissions",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "jwt_token": {"type": "string", "description": "User JWT token"}
-    },
-    "required": ["jwt_token"]
-  },
-  "responseSchema": {
-    "type": "object", 
-    "properties": {
-      "valid": {"type": "boolean"},
-      "user_id": {"type": "string"},
-      "scopes": {"type": "array", "items": {"type": "string"}},
-      "expires_at": {"type": "string", "format": "date-time"}
-    }
-  },
-  "examples": {
-    "success": {
-      "valid": true,
-      "user_id": "user_123", 
-      "scopes": ["finance:read", "hr:write"],
-      "expires_at": "2024-01-15T10:30:00Z"
-    },
-    "error": {
-      "valid": false,
-      "error": "Token expired"
-    }
-  }
-}
-```
-
-**Impact for Goal Teams:**
-
-Goal teams see precise response structures and concrete examples, eliminating guesswork and the need to manually write example responses in `example_conversation_history`.
-
-_Current example_conversation_history approach:_
-```python
-example_conversation_history="\n ".join([
-    "user_confirmed_tool_run: <user clicks confirm on ValidateJWT tool>",
-    "tool_result: { 'valid': true, 'user_id': 'user_123' }",  # Manual writing
-    "agent: Your token is valid!"
-])
 ```
 
 ---
