@@ -233,7 +233,7 @@ graph TD
 
 ## **Backend Infrastructure Tools**
 
-YODA's architecture separates **goal-oriented tools** (business logic for customer interactions) from **backend infrastructure tools** (system capabilities like authentication, permissions, alerts). Backend tools are implemented as MCP servers that goal-oriented tools consume, creating a composable microservices architecture where any business tool can leverage system capabilities.
+YODA's architecture separates **goal-oriented tools** (business logic for user interactions) from **backend infrastructure tools** (system capabilities like authentication, permissions, alerts). Backend tools are implemented as MCP servers that goal-oriented tools consume, creating a composable microservices architecture where any business tool can leverage system capabilities.
 
 ### **Architecture Pattern: Infrastructure as MCP Tools**
 
@@ -268,7 +268,7 @@ graph TD
 ### **Benefits of Backend Tool Architecture**
 
 - **🔧 Composable Microservices:** Any goal-oriented tool can use any backend capability
-- **🎯 Separation of Concerns:** Business logic separate from infrastructure logic
+- **🎯 Separation of Concerns:** User-facing business logic separate from infrastructure logic
 - **♻️ Reusability:** Backend tools shared across all business domains
 - **🧪 Testability:** Each infrastructure capability independently testable
 - **📈 Scalability:** Backend tools can be scaled independently based on usage
@@ -287,7 +287,7 @@ class FinanceMCP:
         # 1. Validate permissions using backend tool
         has_permission = await self.user_mgmt.validate_permissions(
             user_id=user_id,
-            required_scopes=["finance:transfer"]
+            required_scopes=["ops"]
         )
         
         if not has_permission:
@@ -318,7 +318,7 @@ class FinanceMCP:
 
 ## **User Management & Authentication Flow**
 
-YODA uses a centralized User Management MCP Server to handle authentication, user sessions, permission validation, and tool permission registry. This approach keeps business MCP tools focused on business logic while ensuring secure, user-scoped operations through a single security layer. Goal teams simply specify which tools to include—permissions are automatically discovered and validated.
+YODA implements scope-based agent categories where each user role (client, csr, ops, sales) has dedicated agent goals with tailored behaviors and conversation styles. The system uses a single authentication MCP server to handle JWT complexity and map enterprise authentication to clean role categories, with the `listAgents` tool providing scope-aware agent discovery.
 
 ```mermaid
 graph TD
@@ -330,130 +330,143 @@ graph TD
     
     subgraph YODA ["🧠 YODA Orchestrator"]
         API["FastAPI<br/>/send-prompt + sessionId"]
-        Workflow["AgentGoalWorkflow<br/>stores user_context"]
-        UserMgmtActivity["User Management<br/>MCP Activities"]
+        Workflow["AgentGoalWorkflow<br/>role-aware processing"]
+        ListAgents["Enhanced ListAgents Tool<br/>scope-aware filtering"]
         
         API --> Workflow
-        Workflow --> UserMgmtActivity
+        Workflow --> ListAgents
     end
     
-    subgraph UserMgmtMCP ["🔐 User Management MCP Server"]
-        AuthTool["AuthenticateUser<br/>sessionId → JWT + scopes"]
-        PermissionTool["GetToolPermissions<br/>tool → required scopes"]
-        AccessTool["ValidateUserAccess<br/>check permissions"]
-        AlertsTool["GetUserAlerts<br/>user-specific alerts"]
-        ScheduleTool["GetUserSchedules<br/>user-specific schedules"]
-        Database["PostgreSQL<br/>users, alerts, schedules, tool_permissions"]
+    subgraph AuthMCP ["🔐 @entity/auth-mcp-server"]
+        AuthTool["AuthenticateUser<br/>sessionId → role_categories"]
+        JWTMapping["JWT Complexity Handler<br/>enterprise JWT → clean roles"]
         
-        AuthTool --> Database
-        PermissionTool --> Database
-        AccessTool --> Database
-        AlertsTool --> Database
-        ScheduleTool --> Database
+        AuthTool --> JWTMapping
     end
     
-    subgraph BusinessMCP ["🏢 Business MCP Server"]
-        CustomerTool["GetCustomerDetails<br/>clean business logic"]
-        BusinessAPI["Business API<br/>no JWT handling needed"]
+    subgraph Goals ["📁 Role-Based Goal Categories"]
+        ClientGoals["client.py<br/>Friendly conversation style"]
+        CSRGoals["csr.py<br/>Professional support style"] 
+        OpsGoals["ops.py<br/>Direct technical reports"]
+        SalesGoals["sales.py<br/>Relationship-focused style"]
         
-        CustomerTool --> BusinessAPI
+        ClientGoals --> SameTools["Same Business Tools<br/>Different Agent Behaviors"]
+        CSRGoals --> SameTools
+        OpsGoals --> SameTools
+        SalesGoals --> SameTools
+    end
+    
+    subgraph BackendInfra ["🔧 Backend Infrastructure Tools"]
+        AlertsMCP["@yoda/alerts-mcp<br/>CreateAlert, GetAlerts"]
+        SchedulerMCP["@yoda/scheduler-mcp<br/>CreateSchedule, GetSchedules"]
+        NotificationMCP["@yoda/notification-mcp<br/>SendEmail, SendSMS"]
     end
     
     %% Flow connections
     YodaUI -->|"{ prompt, sessionId }"| API
-    UserMgmtActivity --> AuthTool
-    AuthTool -->|"user_context"| UserMgmtActivity
-    UserMgmtActivity -->|"store user_context"| Workflow
-    Workflow -->|"user_context + business_request"| CustomerTool
-    UserMgmtActivity --> PermissionTool
-    UserMgmtActivity --> AccessTool
-    UserMgmtActivity --> AlertsTool
-    UserMgmtActivity --> ScheduleTool
+    ListAgents --> AuthTool
+    AuthTool -->|"role_categories: ['csr']"| ListAgents
+    ListAgents -->|"filtered agents by role"| Workflow
+    Goals -->|"agents with tailored behaviors"| ListAgents
+    SameTools --> BackendInfra
     
     classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef yoda fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef userMgmt fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef business fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef auth fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef goals fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef backend fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
     
     class Frontend frontend
     class YODA yoda
-    class UserMgmtMCP userMgmt
-    class BusinessMCP business
+    class AuthMCP auth
+    class Goals goals
+    class BackendInfra backend
 ```
 
-**Benefits of Centralized Approach:**
+**Benefits of Role-Based Category Approach:**
 
-- **🔒 Single Security Layer:** All authentication, authorization, and tool permission registry centralized
-- **🧹 Clean Business Tools:** Business MCP servers focus purely on business logic  
-- **📊 User Context Management:** Alerts, schedules, and permissions managed in one place
-- **🔄 Scalable Architecture:** Easy to add new business tools without security complexity
-- **⚡ Automatic Permission Discovery:** Goal teams just specify tools—permissions handled automatically
-- **🎯 Tool Team Ownership:** Tool teams define their own permission requirements
+- **🎭 Role-Specific Agent Behaviors:** Same tools with tailored conversation styles for different user types
+- **🏢 Enterprise JWT Abstraction:** @entity/auth-mcp handles complex enterprise authentication mapping
+- **🔍 Scope-Aware Discovery:** Users only see agents appropriate for their role
+- **🧩 Backend Tool Freedom:** Tool teams can freely use all infrastructure MCP tools
+- **⚡ Enhanced ListAgents:** Single tool modification provides complete role-based filtering
 
 **Example Flow:**
 
-**1. User Authentication:**
+**1. Enterprise JWT → Role Categories:**
 ```json
-// YODA calls AuthenticateUser with session
+// @entity/auth-mcp receives complex enterprise JWT
 {
   "session_id": "sess_abc123"
 }
 
-// Response: Complete user context
+// Complex enterprise JWT from company auth system
 {
-  "user_id": "user_456",
-  "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "scopes": ["finance:read", "customer:read", "hr:write"],
-  "expires_at": "2024-01-15T10:30:00Z"
+  "user_id": "emp_456",
+  "roles": ["customer_service", "support_tier_2"], 
+  "department": "customer_success",
+  "permissions": ["view_customer_data", "modify_orders"],
+  "groups": ["west_coast_team", "senior_agents"]
+}
+
+// @entity/auth-mcp maps to clean role categories
+{
+  "user_id": "emp_456",
+  "role_categories": ["csr"],  // Clean, simple role mapping
+  "session_expires": "2024-01-15T10:30:00Z"
 }
 ```
 
-**2. Tool Permission Discovery:**
+**2. Scope-Aware Agent Discovery:**
 ```json
-// YODA asks User Management MCP Server what permissions a tool needs
+// Enhanced listAgents with role filtering
 {
-  "tool_name": "GetCustomerDetails",
-  "mcp_server": "customer-mcp"
+  "session_id": "sess_abc123",
+  "user_role_categories": ["csr"]
 }
 
-// Response: Required scopes for this tool
+// Response: Only agents appropriate for CSR role
 {
-  "required_scopes": ["customer:read"],
-  "tool_name": "GetCustomerDetails",
-  "mcp_server": "customer-mcp"
+  "agents": [
+    {
+      "agent_name": "Customer Support Assistant",
+      "goal_id": "goal_csr_order_status", 
+      "agent_description": "Professional order status checking with technical details",
+      "conversation_style": "direct_professional"
+    },
+    {
+      "agent_name": "Account Management Helper", 
+      "goal_id": "goal_csr_account_mgmt",
+      "agent_description": "Manage customer accounts with administrative tools",
+      "conversation_style": "business_focused"
+    }
+  ]
 }
 ```
 
-**3. Permission Validation:**
-```json
-// YODA validates if user has required scopes
-{
-  "user_id": "user_456",
-  "user_scopes": ["finance:read", "customer:read", "hr:write"],
-  "required_scopes": ["customer:read"]
-}
+**3. Role-Specific Agent Behavior:**
+```python
+# csr.py - Professional, direct style
+goal_csr_order_status = AgentGoal(
+    category_tag="csr",
+    example_conversation_history="\n ".join([
+        "user: Order status for 102",
+        "agent: Order ID: 102. Status: Shipped. Tracking: 039813852990618. ETA: April 30, 2025.",
+        "user: Any delivery issues?", 
+        "agent: No delivery exceptions. Package in transit. Last scan: Phoenix, AZ."
+    ])
+)
 
-// Response: Authorization check
-{
-  "authorized": true,
-  "missing_scopes": []
-}
-```
-
-**4. Clean Business Tool Call:**
-```json
-// Business MCP tool receives clean request (no JWT complexity)
-{
-  "customer_id": "CUST_123"
-}
-
-// Response: Pure business data
-{
-  "customer_id": "CUST_123",
-  "name": "John Smith",
-  "email": "john@example.com",
-  "status": "active"
-}
+# client.py - Friendly, conversational style  
+goal_client_order_status = AgentGoal(
+    category_tag="client",
+    example_conversation_history="\n ".join([
+        "user: Hi, how's my order doing?",
+        "agent: Hi there! I'd be happy to check on your order. What's your order number?",
+        "user: 102",
+        "agent: Great news! Your order shipped and is on its way! 😊 It should arrive by April 30th."
+    ])
+)
 ```
 
 
