@@ -298,13 +298,7 @@ user_context = await portal_auth_mcp.authenticate_user(session_id)
 # user_context: {"user_id": "...", "role_categories": ["csr"]}
 ```
 
-### **Support Backend MCP Servers**
-
-Support backend MCP servers provide universal infrastructure features to all business MCP servers. Examples: **@yoda/alerts-mcp** (alerts and notifications), **@yoda/scheduler-mcp** (scheduling and automation), **@yoda/notification-mcp** (multi-channel notifications), **@yoda/analytics-mcp** (analytics and event tracking). These servers are platform-agnostic and can be used by any business logic MCP server.
-
----
-
-## **Platform-Specific Auth Tools**
+#### **Platform-Specific Auth Servers**
 
 YODA uses the appropriate platform authentication MCP server to handle JWT complexity and map platform-specific authentication to clean, standardized user roles. This enables scope-aware agent discovery where each user role (client, csr, ops, sales) has dedicated agent goals with tailored behaviors and conversation styles.
 
@@ -393,17 +387,21 @@ goal_client_order_status = AgentGoal(
 )
 ```
 
+### **Support Backend MCP Servers**
 
+Support backend MCP servers provide universal infrastructure features to all business MCP servers. Examples: **@yoda/alerts-mcp** (alerts and notifications), **@yoda/scheduler-mcp** (scheduling and automation), **@yoda/notification-mcp** (multi-channel notifications), **@yoda/analytics-mcp** (analytics and event tracking). These servers are platform-agnostic and can be used by any business logic MCP server.
+
+**Example:**
+```python
+# Support backend MCP servers are used by business MCP servers from any domain:
+await alerts_mcp.create_user_alert(condition="BTC < $50000")
+await scheduler_mcp.create_schedule(action="process_payroll", condition="bi_weekly")
+await notification_mcp.send_email(template="confirmation")
+await analytics_mcp.track_event(event="money_transfer")
+```
 
 ---
 
-## **Support Backend MCP Servers in Action**
 
-Support backend MCP servers are used by business MCP servers from any domain (finance, HR, customer service) to access shared infrastructure features:
-
-- **Alerts:** `await alerts_mcp.create_user_alert(condition="BTC < $50000")`
-- **Scheduling:** `await scheduler_mcp.create_schedule(action="process_payroll", condition="bi_weekly")`
-- **Notifications:** `await notification_mcp.send_email(template="confirmation")`
-- **Analytics:** `await analytics_mcp.track_event(event="money_transfer")`
 
 
