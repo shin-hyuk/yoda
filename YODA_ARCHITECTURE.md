@@ -107,6 +107,18 @@ To solve this, YODA establishes a shared documentation standard: both teams coll
 
 ## GetCustomerDetails Tool
 
+**Summary:**
+Retrieves detailed customer information from the CRM system. Returns customer profile data including contact information, account status, and registration details.
+
+**Input Schema:**
+{
+  "type": "object",
+  "properties": {
+    "customer_id": {"type": "string", "description": "Unique customer identifier"}
+  },
+  "required": ["customer_id"]
+}
+
 **Response Schema:**
 {
   "type": "object", 
