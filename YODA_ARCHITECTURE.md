@@ -96,31 +96,33 @@ graph TB
 
 ## **MCP Tool Documentation Standards**
 
-YODA's scalable tool ecosystem is built on close collaboration between two teams: **tool teams**, who develop and maintain MCP servers, and **goal teams**, who design agent experiences that leverage those tools. The standard MCP protocol exposes only a tool's name, description, and input schema—leaving **goal teams** to infer or reverse-engineer response formats.
+YODA's scalable tool ecosystem is built on close collaboration between two teams: **tool teams**, who develop and maintain MCP servers, and **goal teams**, who design agent experiences that leverage those tools. The standard MCP protocol exposes only a tool's name, description, and input schema—leaving goal teams to infer or reverse-engineer response formats.
 
-To solve this, YODA establishes a shared documentation standard: both teams collaborate on a living document that clearly defines response schemas and example payloads. This document acts first as a requirements spec from the **goal team**, then as the authoritative reference from the **tool team**, ensuring agent design is accurate and tool integration is seamless.
+To solve this, YODA establishes a shared documentation standard: both teams collaborate on a living document that clearly defines response schemas and example payloads. This document acts first as a requirements spec from the goal team, then as the authoritative reference from the tool team, ensuring agent design is accurate and tool integration is seamless.
 
-**Tool Documentation (Provided by Tool Team):**
+**Example: Documentation Standard in Practice**
 
 ```markdown
-# @company/auth-mcp-server Documentation
+# @company/customer-mcp-server Documentation
 
-## ValidateJWT Tool
+## GetCustomerDetails Tool
 
 **Response Schema:**
 {
   "type": "object", 
   "properties": {
-    "valid": {"type": "boolean"},
-    "user_id": {"type": "string"},
-    "scopes": {"type": "array", "items": {"type": "string"}"},
-    "expires_at": {"type": "string", "format": "date-time"}
-  }
+    "customer_id": {"type": "string"},
+    "name": {"type": "string"},
+    "email": {"type": "string"},
+    "status": {"type": "string"},
+    "created_date": {"type": "string", "format": "date"}
+  },
+  "required": ["customer_id", "name", "email", "status"]
 }
 
 **Examples:**
-- Success: {"valid": true, "user_id": "user_123", "scopes": ["finance:read", "hr:write"], "expires_at": "2024-01-15T10:30:00Z"}
-- Error: {"valid": false, "error": "Token expired"}
+- Success: {"customer_id": "CUST_123", "name": "John Smith", "email": "john@example.com", "status": "active", "created_date": "2024-01-15"}
+- Not Found: {"error": "Customer not found", "customer_id": "CUST_999"}
 ```
 
 ---
