@@ -141,8 +141,6 @@ Retrieves detailed customer information from the CRM system. Returns customer pr
 
 ## Parallel Team Workflow
 
-Tool teams build and maintain MCP servers; goal teams design agent experiences. Tools are automatically discovered—adding a new tool is as simple as registering a new MCP server endpoint, with no redeployment or deep integration required.
-
 1. **Goal Team: Define & Send Requirement**  
    Prepare a structured MCP server/tool requirement document (as shown in the documentation standards above).
 
