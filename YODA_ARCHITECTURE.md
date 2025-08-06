@@ -96,9 +96,7 @@ graph TB
 
 ## **MCP Tool Documentation Standards**
 
-YODA's architecture relies on seamless collaboration between two specialized teams: **tool teams** who build and maintain MCP servers with business logic, and **goal teams** who design agent experiences and user interactions. To streamline this collaboration, documentation standards are applied so that the information exchanged between teams follows expected formats throughout the entire development process.
-
-While the MCP protocol only requires servers to define an `inputSchema` for each tool, this forces goal teams to guess tool response formats. YODA addresses this by establishing documentation standards: tool teams are encouraged to provide separate documentation with `responseSchema` and `examples`, giving goal teams complete input and output details for accurate agent design without breaking MCP protocol compatibility.
+YODA's scalable tool ecosystem is built on close collaboration between two teams: tool teams, who develop and maintain MCP servers, and goal teams, who design agent experiences that leverage those tools. The standard MCP protocol exposes only a tool's name, description, and input schema—leaving goal teams to infer or reverse-engineer response formats. To solve this, YODA establishes a shared documentation standard: both teams collaborate on a living document that clearly defines response schemas and example payloads. This document acts first as a requirements spec from the goal team, then as the authoritative reference from the tool team, ensuring agent design is accurate and tool integration is seamless.
 
 **Tool Documentation (Provided by Tool Team):**
 
