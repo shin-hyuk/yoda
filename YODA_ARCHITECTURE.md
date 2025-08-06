@@ -233,70 +233,114 @@ graph TD
 
 ## **Backend Infrastructure Tools**
 
-YODA's architecture separates **goal-oriented tools** (business logic for user interactions) from **backend infrastructure tools** (system capabilities like authentication, permissions, alerts). Backend tools are implemented as MCP servers that goal-oriented tools consume, creating a composable microservices architecture where any business tool can leverage system capabilities.
+YODA's architecture separates **goal-oriented tools** (business logic for user interactions) from **backend infrastructure tools**. Backend infrastructure tools are divided into two distinct types: **orchestrator-level tools** that handle platform-specific authentication and user scoping across different deployment contexts (portal, app, enterprise), and **goal-oriented backend tools** that provide universal functionality like alerts, scheduling, and notifications that any business tool can consume regardless of platform.
 
-### **Architecture Pattern: Infrastructure as MCP Tools**
+### **Architecture Pattern: Two-Tier Backend Infrastructure**
 
 ```mermaid
 graph TD
-    subgraph "Goal-Oriented Tools" 
+    subgraph YODA ["🧠 YODA Orchestrator"]
+        ListAgents["Enhanced ListAgents<br/>scope-aware filtering"]
+        Workflow["AgentGoalWorkflow<br/>user scope management"]
+    end
+    
+    subgraph OrchBackend ["🔐 Orchestrator-Level Backend Tools"]
+        PortalAuth["@portal/auth-mcp<br/>Portal JWT → roles"]
+        AppAuth["@app/auth-mcp<br/>App JWT → roles"] 
+        EnterpriseAuth["@enterprise/auth-mcp<br/>SSO JWT → roles"]
+    end
+    
+    subgraph GoalBackend ["🔧 Goal-Oriented Backend Tools"]
+        AlertsMCP["@yoda/alerts-mcp<br/>CreateAlert<br/>GetUserAlerts"]
+        ScheduleMCP["@yoda/scheduler-mcp<br/>CreateSchedule<br/>GetSchedules"]
+        NotificationMCP["@yoda/notification-mcp<br/>SendEmail<br/>SendSMS"]
+        AnalyticsMCP["@yoda/analytics-mcp<br/>TrackEvent<br/>GetMetrics"]
+    end
+    
+    subgraph BusinessTools ["🏢 Goal-Oriented Tools"]
         CustomerMCP["@company/customer-mcp<br/>GetCustomerDetails<br/>UpdateCustomer"]
         FinanceMCP["@company/finance-mcp<br/>TransferMoney<br/>GetBalance"]
         HRMCP["@company/hr-mcp<br/>BookPTO<br/>GetPayroll"]
     end
     
-    subgraph "Backend Infrastructure Tools"
-        UserMgmtMCP["@yoda/user-management-mcp<br/>AuthenticateUser<br/>ValidatePermissions"]
-        AlertsMCP["@yoda/alerts-mcp<br/>CreateAlert<br/>GetUserAlerts"]
-        ScheduleMCP["@yoda/scheduler-mcp<br/>CreateSchedule<br/>GetSchedules"]
-        NotificationMCP["@yoda/notification-mcp<br/>SendEmail<br/>SendSMS"]
-    end
+    %% Orchestrator uses platform-specific auth
+    YODA --> PortalAuth
+    YODA --> AppAuth  
+    YODA --> EnterpriseAuth
     
-    CustomerMCP --> UserMgmtMCP
+    %% Business tools use goal-oriented backend tools
     CustomerMCP --> AlertsMCP
-    FinanceMCP --> UserMgmtMCP
+    CustomerMCP --> NotificationMCP
     FinanceMCP --> AlertsMCP
-    FinanceMCP --> NotificationMCP
-    HRMCP --> UserMgmtMCP
+    FinanceMCP --> ScheduleMCP
     HRMCP --> ScheduleMCP
+    HRMCP --> AnalyticsMCP
     
-    UserMgmtMCP --> Database["PostgreSQL<br/>users, sessions, permissions"]
-    AlertsMCP --> Database
-    ScheduleMCP --> Database
+    classDef orch fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef orchBackend fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef goalBackend fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    classDef business fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class YODA orch
+    class OrchBackend orchBackend
+    class GoalBackend goalBackend
+    class BusinessTools business
 ```
 
-### **Benefits of Backend Tool Architecture**
 
-- **🔧 Composable Microservices:** Any goal-oriented tool can use any backend capability
-- **🎯 Separation of Concerns:** User-facing business logic separate from infrastructure logic
-- **♻️ Reusability:** Backend tools shared across all business domains
-- **🧪 Testability:** Each infrastructure capability independently testable
-- **📈 Scalability:** Backend tools can be scaled independently based on usage
 
-### **Example: Rich Business Tool Using Backend Infrastructure**
+### **Orchestrator-Level Backend Tools**
+
+Platform-specific authentication servers that YODA Orchestrator uses to handle JWT complexity and map to standardized role categories:
 
 ```python
-# @company/finance-mcp-server leveraging backend tools
+# Different auth servers for different deployment platforms
+class YODAOrchestrator:
+    async def authenticate_user(self, session_id, platform):
+        if platform == "portal":
+            auth_result = await portal_auth_mcp.authenticate_user(session_id)
+        elif platform == "mobile_app":
+            auth_result = await app_auth_mcp.authenticate_user(session_id) 
+        elif platform == "enterprise":
+            auth_result = await enterprise_auth_mcp.authenticate_user(session_id)
+        
+        # All return standardized format: {"user_id": "...", "role_categories": ["csr"]}
+        return auth_result
+
+# @portal/auth-mcp handles portal-specific JWT
+async def authenticate_user(session_id):
+    portal_jwt = await portal_system.validate_session(session_id)
+    # Complex portal JWT → clean roles
+    role_categories = map_portal_roles(portal_jwt["user_type"], portal_jwt["permissions"])
+    return {"user_id": portal_jwt["user_id"], "role_categories": role_categories}
+
+# @enterprise/auth-mcp handles enterprise SSO  
+async def authenticate_user(session_id):
+    sso_jwt = await enterprise_sso.validate_session(session_id)
+    # Complex enterprise JWT → clean roles
+    role_categories = map_enterprise_roles(sso_jwt["roles"], sso_jwt["department"])
+    return {"user_id": sso_jwt["employee_id"], "role_categories": role_categories}
+```
+
+### **Goal-Oriented Backend Tools**
+
+Universal infrastructure tools that any business MCP server can use for common functionality:
+
+```python
+# @company/finance-mcp-server using goal-oriented backend tools
 class FinanceMCP:
     def __init__(self):
-        self.user_mgmt = MCPClient("@yoda/user-management-mcp")
+        # Goal-oriented backend tools - available to any business tool
         self.alerts = MCPClient("@yoda/alerts-mcp")
+        self.scheduler = MCPClient("@yoda/scheduler-mcp") 
         self.notifications = MCPClient("@yoda/notification-mcp")
+        self.analytics = MCPClient("@yoda/analytics-mcp")
     
     async def transfer_money(self, from_account, to_account, amount, user_id):
-        # 1. Validate permissions using backend tool
-        has_permission = await self.user_mgmt.validate_permissions(
-            user_id=user_id,
-            required_scopes=["ops"]
-        )
-        
-        if not has_permission:
-            return {"error": "Insufficient permissions"}
-        
-        # 2. Business logic
+        # Business logic
         transfer = await self.execute_transfer(from_account, to_account, amount)
         
-        # 3. Create alert using backend tool
+        # Use goal-oriented backend infrastructure
         if amount > 10000:
             await self.alerts.create_user_alert(
                 user_id=user_id,
@@ -304,11 +348,16 @@ class FinanceMCP:
                 alert_type="high_value_transaction"
             )
         
-        # 4. Send notification using backend tool
         await self.notifications.send_email(
             user_id=user_id,
-            template="transfer_confirmation",
+            template="transfer_confirmation", 
             data={"amount": amount, "to_account": to_account}
+        )
+        
+        await self.analytics.track_event(
+            user_id=user_id,
+            event="money_transfer",
+            metadata={"amount": amount, "type": "internal"}
         )
         
         return {"transfer_id": transfer.id, "status": "completed"}
@@ -473,16 +522,16 @@ goal_client_order_status = AgentGoal(
 
 ---
 
-## **Alerts & Scheduling Backend Tools**
+## **Goal-Oriented Backend Tools in Action**
 
-The alerts and scheduling system exemplifies YODA's backend infrastructure pattern: specialized MCP servers that provide persistent, user-scoped capabilities to any goal-oriented tool. These backend tools manage stateful operations independently while remaining composable across all business domains.
+Goal-oriented backend tools provide universal infrastructure capabilities that any business MCP server can use. These tools manage persistent, stateful operations while remaining platform-agnostic and composable across all business domains.
 
-### **Alert Backend Architecture**
+### **@yoda/alerts-mcp-server**
 
-**@yoda/alerts-mcp-server** provides persistent user alert capabilities:
+Universal alerting infrastructure that any business tool can use for user notifications:
 
 ```python
-# Goal-oriented tools can create sophisticated alerts
+# Any business tool can create sophisticated alerts
 await alerts_mcp.create_user_alert(
     user_id="user_456",
     condition="BTC price drops below $50,000 AND portfolio loss > 5%",
@@ -490,7 +539,7 @@ await alerts_mcp.create_user_alert(
     priority="high"
 )
 
-# Backend manages persistent storage and monitoring
+# Universal alert format across all business domains
 {
   "alert_id": "alert_123",
   "user_id": "user_456", 
@@ -501,9 +550,9 @@ await alerts_mcp.create_user_alert(
 }
 ```
 
-### **Scheduling Backend Architecture**
+### **@yoda/scheduler-mcp-server**
 
-**@yoda/scheduler-mcp-server** handles time-based and conditional automation:
+Universal scheduling infrastructure for time-based and conditional automation:
 
 ```python
 # Any business tool can schedule actions
@@ -514,7 +563,7 @@ await scheduler_mcp.create_schedule(
     action_params={"amount": 500, "target_account": "savings_001"}
 )
 
-# Backend manages execution timing and state
+# Universal schedule format across all business domains
 {
   "schedule_id": "schedule_789",
   "user_id": "user_456",
@@ -526,30 +575,96 @@ await scheduler_mcp.create_schedule(
 }
 ```
 
-### **Cross-Domain Integration Example**
+### **@yoda/notification-mcp-server**
+
+Universal notification infrastructure for multi-channel communications:
 
 ```python
-# HR tool creating finance-related schedule
+# Any business tool can send notifications
+await notification_mcp.send_email(
+    user_id="user_456",
+    template="payment_confirmation",
+    data={"amount": "$1,500", "account": "checking"}
+)
+
+await notification_mcp.send_sms(
+    user_id="user_456", 
+    message="Your payment of $1,500 has been processed successfully."
+)
+
+await notification_mcp.send_push_notification(
+    user_id="user_456",
+    title="Payment Complete",
+    body="Your transfer is complete. Check your account for details."
+)
+```
+
+### **@yoda/analytics-mcp-server**
+
+Universal analytics infrastructure for business intelligence and monitoring:
+
+```python
+# Any business tool can track events and metrics
+await analytics_mcp.track_event(
+    user_id="user_456",
+    event="money_transfer",
+    metadata={
+        "amount": 1500,
+        "type": "internal",
+        "from_account": "checking",
+        "to_account": "savings"
+    }
+)
+
+await analytics_mcp.track_metric(
+    metric_name="daily_transaction_volume",
+    value=1500,
+    tags={"user_type": "premium", "region": "west_coast"}
+)
+```
+
+### **Cross-Domain Integration Example**
+
+Business tools from different domains using the same goal-oriented backend infrastructure:
+
+```python
+# HR tool using multiple goal-oriented backend tools
 class HRMCP:
+    def __init__(self):
+        self.scheduler = MCPClient("@yoda/scheduler-mcp")
+        self.alerts = MCPClient("@yoda/alerts-mcp")
+        self.notifications = MCPClient("@yoda/notification-mcp")
+        self.analytics = MCPClient("@yoda/analytics-mcp")
+    
     async def setup_payroll_automation(self, employee_id, salary_amount):
-        # Create recurring payroll schedule using backend tool
+        # Schedule recurring payroll using universal scheduler
         await self.scheduler.create_schedule(
             user_id=employee_id,
             action="process_payroll",
-            condition="bi_weekly", 
-            action_params={
-                "amount": salary_amount,
-                "employee_id": employee_id,
-                "account": "payroll_account"
-            }
+            condition="bi_weekly",
+            action_params={"amount": salary_amount, "employee_id": employee_id}
         )
         
-        # Create alert for payroll failures using backend tool
+        # Create alert for payroll failures using universal alerts
         await self.alerts.create_user_alert(
             user_id=employee_id,
             condition="payroll_failed OR insufficient_funds",
             alert_type="payroll_issue",
             priority="critical"
+        )
+        
+        # Send confirmation using universal notifications
+        await self.notifications.send_email(
+            user_id=employee_id,
+            template="payroll_setup_confirmation",
+            data={"amount": salary_amount, "frequency": "bi_weekly"}
+        )
+        
+        # Track setup event using universal analytics
+        await self.analytics.track_event(
+            user_id=employee_id,
+            event="payroll_automation_setup",
+            metadata={"salary_amount": salary_amount}
         )
 ```
 
